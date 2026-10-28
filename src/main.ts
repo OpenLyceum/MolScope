@@ -21,25 +21,45 @@ import "./brand.js";
 
 import { onReadyToLaunch, PreferencesModel, Sim } from "scenerystack/sim";
 import { Tandem } from "scenerystack/tandem";
+import { BiomoleculesScreen } from "./biomolecules/BiomoleculesScreen.js";
+import { CrystalsScreen } from "./crystals/CrystalsScreen.js";
 import { StringManager } from "./i18n/StringManager.js";
-import { SimPreferencesModel } from "./preferences/SimPreferencesModel.js";
-import { SimPreferencesNode } from "./preferences/SimPreferencesNode.js";
-import SimColors from "./SimColors.js";
-import { SimScreen } from "./sim-screen/SimScreen.js";
+import MolScopeColors from "./MolScopeColors.js";
+import { MoleculesScreen } from "./molecules/MoleculesScreen.js";
+import { MolScopePreferencesModel } from "./preferences/MolScopePreferencesModel.js";
+import { MolScopePreferencesNode } from "./preferences/MolScopePreferencesNode.js";
 
 onReadyToLaunch(() => {
   const stringManager = StringManager.getInstance();
 
-  // Simulation-specific preferences; initial values come from simQueryParameters.
-  const simPreferences = new SimPreferencesModel(Tandem.ROOT.createTandem("preferences"));
+  // Simulation-specific preferences; initial values come from molScopeQueryParameters.
+  const simPreferences = new MolScopePreferencesModel(Tandem.ROOT.createTandem("preferences"));
 
   const screens = [
-    new SimScreen({
-      // The screen name Property updates automatically when the locale changes
-      name: stringManager.getScreenNames().simStringProperty,
-      tandem: Tandem.ROOT.createTandem("simScreen"),
-      backgroundColorProperty: SimColors.backgroundColorProperty,
-    }),
+    new MoleculesScreen(
+      { perspectiveProperty: simPreferences.perspectiveProperty },
+      {
+        name: stringManager.getScreenNames().moleculesStringProperty,
+        tandem: Tandem.ROOT.createTandem("moleculesScreen"),
+        backgroundColorProperty: MolScopeColors.backgroundColorProperty,
+      },
+    ),
+    new BiomoleculesScreen(
+      { perspectiveProperty: simPreferences.perspectiveProperty },
+      {
+        name: stringManager.getScreenNames().biomoleculesStringProperty,
+        tandem: Tandem.ROOT.createTandem("biomoleculesScreen"),
+        backgroundColorProperty: MolScopeColors.backgroundColorProperty,
+      },
+    ),
+    new CrystalsScreen(
+      { perspectiveProperty: simPreferences.perspectiveProperty },
+      {
+        name: stringManager.getScreenNames().crystalsStringProperty,
+        tandem: Tandem.ROOT.createTandem("crystalsScreen"),
+        backgroundColorProperty: MolScopeColors.backgroundColorProperty,
+      },
+    ),
   ];
 
   const sim = new Sim(stringManager.getTitleStringProperty(), screens, {
@@ -53,7 +73,7 @@ onReadyToLaunch(() => {
       simulationOptions: {
         customPreferences: [
           {
-            createContent: (tandem: Tandem) => new SimPreferencesNode(simPreferences, tandem),
+            createContent: (tandem: Tandem) => new MolScopePreferencesNode(simPreferences, tandem),
           },
         ],
       },
@@ -65,10 +85,12 @@ onReadyToLaunch(() => {
 
     // Optional: fill in credits shown in Help → About
     credits: {
-      leadDesign: "",
-      softwareDevelopment: "",
-      team: "",
+      leadDesign: "Martin Veillette",
+      softwareDevelopment: "Martin Veillette",
+      team: "Inspired by Jmol, the open-source Java viewer for chemical structures in 3D (jmol.sourceforge.net)",
       qualityAssurance: "",
+      thanks:
+        "Structures: PubChem (NIH NCBI), RCSB Protein Data Bank, Crystallography Open Database — all public domain.",
     },
   });
 

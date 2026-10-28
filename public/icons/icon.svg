@@ -1,7 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="o" cx="0.38" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#ffd0d0"/>
+      <stop offset="0.35" stop-color="#ff3030"/>
+      <stop offset="1" stop-color="#8a0000"/>
+    </radialGradient>
+    <radialGradient id="c" cx="0.38" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#f0f0f0"/>
+      <stop offset="0.35" stop-color="#a0a0a0"/>
+      <stop offset="1" stop-color="#404040"/>
+    </radialGradient>
+    <radialGradient id="n" cx="0.38" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#d8e0ff"/>
+      <stop offset="0.35" stop-color="#4a64ff"/>
+      <stop offset="1" stop-color="#101a80"/>
+    </radialGradient>
+  </defs>
   <rect width="512" height="512" fill="#1a1a2e"/>
-  <circle cx="256" cy="256" r="180" fill="none" stroke="#4fc3f7" stroke-width="20"/>
-  <circle cx="256" cy="256" r="60" fill="#4fc3f7"/>
-  <ellipse cx="256" cy="256" rx="180" ry="60" fill="none" stroke="#4fc3f7" stroke-width="12" opacity="0.6" transform="rotate(30 256 256)"/>
-  <ellipse cx="256" cy="256" rx="180" ry="60" fill="none" stroke="#4fc3f7" stroke-width="12" opacity="0.6" transform="rotate(-30 256 256)"/>
+  <g stroke="#b0bec5" stroke-width="22" stroke-linecap="round">
+    <line x1="256" y1="150" x2="140" y2="330"/>
+    <line x1="256" y1="150" x2="372" y2="330"/>
+    <line x1="140" y1="330" x2="372" y2="330"/>
+  </g>
+  <circle cx="256" cy="150" r="78" fill="url(#o)"/>
+  <circle cx="140" cy="330" r="70" fill="url(#c)"/>
+  <circle cx="372" cy="330" r="70" fill="url(#n)"/>
 </svg>

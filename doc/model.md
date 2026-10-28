@@ -1,50 +1,125 @@
-# Model - SceneryStack Template
+# MolScope — model
 
-This document describes the model (the underlying physics, math, and behavior) for the simulation, in
-terms appropriate for an educator. It is the companion to
-[implementation-notes.md](./implementation-notes.md), which targets developers.
+What the viewer computes, and the conventions it shares with Jmol. Everything here lives in the
+Scenery-free modules under `src/common/model/`.
 
-> **Replace this entire file when forking.** The template ships with no domain physics — only the
-> section structure below. Real OpenLyceum sims (e.g. Stern Gerlach, Light Propagation) fill each
-> section with equations, ranges, and simplifications verified against their model code.
+## Structures
 
-## Overview
+A structure is a list of atoms (element, name, residue, chain, B-factor, occupancy, charge), a
+list of bonds with orders, residues, and one or more frames of Cartesian coordinates in ångströms.
 
-*One or two paragraphs describing what the simulation models and the key ideas a student should take
-away. Write for a teacher, not a programmer — avoid code and class names.*
+| Format | Read | Notes |
+|---|---|---|
+| PDB | ATOM/HETATM, HELIX/SHEET, CONECT, CRYST1, MODEL | First alternate location only; NMR ensembles become frames |
+| MOL/SDF (V2000) | atoms, bonds with orders, charges | Aromatic bonds (type 4) become order 1.5; several same-size records become frames |
+| XYZ | element, x, y, z [, vx, vy, vz] | Multi-frame trajectories; the optional triple is a vibration vector |
+| CIF | cell, symmetry operators, fractional sites | Packed into 1–4 cells per axis; `0.465(4)` reads as 0.465 |
 
-**Example (do not ship):** "The simulation models a block sliding on a ramp with adjustable friction
-and angle. Students see how the component of gravity parallel to the surface sets acceleration and
-how static vs kinetic friction limits motion."
+### Bonding
 
-The template's `SimModel` is an empty coordinator — replace it with real state and a `step(dt)` /
-`reset()` that implement your physics.
+Jmol's autobond rule: atoms *i*, *j* are bonded when
 
-## Quantities and units
+  0.4 Å < d(i, j) < r_cov(i) + r_cov(j) + 0.45 Å
 
-*List the primary modeled quantities, their symbols, units (SI where applicable), and control ranges.
-Mirror the ranges enforced in your `*Constants.ts` or model `Range` options.*
+with covalent radii from Cordero et al. (2008). A spatial hash with cells of 2·r_max + 0.45 Å keeps
+it linear in the atom count. Explicit MOL/CONECT bonds take precedence (they carry orders).
 
-| Quantity | Symbol | Units | Range |
-|---|---|---|---|
-| *(example)* time | t | s | 0 – ∞ |
-| *(example)* mass | m | kg | 0.1 – 5.0 |
+In crystals (CIF), ionic contacts need two extra rules so the picture matches the chemistry:
+like atoms are never bonded when the crystal has several elements (Cs–Cs in CsCl lies inside the
+cut-off), and when anion formers (Pauling χ ≥ 2.5) are present, cation–cation contacts are skipped
+(Ca–Ti in perovskite). Pure metals keep their metal–metal bonds.
 
-## Governing equations
+### Secondary structure
 
-*State the equations or rules that drive the model, with a sentence explaining each. Use a smaller
-fixed time step than the screen default if the integration requires it; the model makes no assumption
-about frame rate.*
+From HELIX/SHEET records when present. Otherwise (as with Jmol's `calculate structure`) from Cα
+geometry: Cα(i)–Cα(i+3) of 4.6–5.7 Å with Cα(i)–Cα(i+4) of 5.6–6.8 Å marks a helix; an extended
+Cα(i)–Cα(i+2) > 6.3 Å run marks a strand. This is a coarse fallback, not DSSP.
 
-**Example (do not ship):** For a damped spring, m·a = −k·x − b·v (+ gravity if applicable).
+### Unit cells
 
-## Simplifications and assumptions
+The cell matrix puts **a** along x and **b** in the xy plane (the PDB/CIF convention). Symmetry
+operators such as `-y,x-y,1/3+z` are parsed into a rotation and translation on fractional
+coordinates. `packCell` applies every operator, wraps into [0, 1), removes duplicates within 0.01
+(fractional), and replicates over the requested cells *including* sites on the far faces, so a
+1×1×1 rock-salt cell shows the familiar 27 ions.
 
-*Note anything intentionally idealized or omitted relative to the real-world phenomenon (e.g. no air
-resistance, point masses, instantaneous response), so educators can set expectations.*
+## Measurements
 
-**Example (do not ship):** "Massless spring; linear damping only; motion confined to one dimension."
+- distance |**b** − **a**| in Å;
+- angle ∠abc in degrees;
+- torsion a–b–c–d about b→c in degrees, IUPAC sign (clockwise looking from b to c is positive),
+  computed as atan2(((**n₁** × **n₂**) · **b̂₂**), **n₁** · **n₂**).
 
-## References
+Values are recomputed from the displayed positions each frame, so they follow trajectories and
+vibrations.
 
-*Optional: textbook sections, papers, or standards the model is based on.*
+## Display model
+
+Per atom: sphere radius, bond radius (or "thin line"), colour, label, cartoon / trace / backbone
+flags, hidden, selected. Commands act on the selection. Presets (the Style menu):
+
+| Style | Spheres | Bonds |
+|---|---|---|
+| Wireframe | off | 1.6 px lines |
+| Sticks | 0.15 Å (caps the joints) | 0.15 Å |
+| Ball & stick | 20 % of van der Waals radius | 0.15 Å |
+| Space-filling | 100 % of van der Waals radius | off |
+| Cartoon / trace / backbone | polymer atoms off; ligands ball & stick; water hidden | — |
+
+Colour schemes: `cpk` (Jmol element colours), `chain` (Jmol chain palette), `structure` (helix
+magenta, sheet gold, nucleic violet), `temperature` (B-factor, blue–white–red), `amino` (RasMol
+residue colours), `group` (rainbow N→C along each chain), `formalCharge`.
+
+### Hydrogen bonds
+
+Without explicit hydrogens (most crystal structures), a donor/acceptor pair of N/O atoms
+2.5–3.5 Å apart, in different residues, not bonded and not sharing a bonded neighbour, is drawn as
+a hydrogen bond. Geometric and permissive: it shows helix i→i+4 and base-pair patterns but no
+angle criterion is applied.
+
+### Coordination polyhedra
+
+Around atoms less electronegative than all their bonded neighbours, with 4–12 neighbours, the
+convex hull of the neighbours is drawn. When several cation types qualify, only those with the
+smallest coordination number are shown (TiO₆, not CaO₁₂, in perovskite); cations cut by the edge of
+the packed block are skipped.
+
+### Vibrations and animation
+
+An extended-XYZ frame with displacement vectors animates as **r**(t) = **r**₀ + **v** sin(2πt / 1 s).
+The library's H₂O and CO₂ modes are illustrative: directions are the textbook normal modes with
+the heavy-atom recoil chosen to conserve momentum; amplitudes are exaggerated for visibility and
+not mass-weighted eigenvectors. Multi-frame files play at 10 frames/s.
+
+## Script language
+
+Commands are separated by `;` or new lines; `#` starts a comment; execution stops at the first
+error, like Jmol.
+
+| Command | Effect |
+|---|---|
+| `load NAME` / `load $NAME` / `load =PDBID` / `load NAME {n n n}` | Library, PubChem, RCSB, packed cells |
+| `select EXPR`, `restrict EXPR`, `display EXPR`, `hide EXPR` | Selection and visibility |
+| `spacefill [on/off/Å/n%]`, `cpk`, `wireframe [on/off/Å]`, `style NAME` | Atom and bond size |
+| `cartoon`, `trace`, `backbone` `[on/off]` | Polymer shapes |
+| `color [SCHEME / NAME / [r,g,b] / [xRRGGBB]]`, `color background C`, `background C` | Colour |
+| `label FORMAT` (`%a %e %i %n %r %c %b %q`), `label off` | Labels |
+| `measure A B [C [D]]`, `measure (EXPR) (EXPR)`, `measure off` | Measurements by serial number or expression |
+| `spin [on/off/°/s]`, `rotate [x/y/z] °`, `zoom [%/in/out]`, `center [EXPR]`, `reset` | Camera |
+| `hbonds`, `unitcell`, `axes`, `polyhedra`, `vibration`, `animation` `[on/off]` | Toggles |
+| `frame N/next/prev` | Frames |
+| `set perspective/halos/hydrogens on/off`, `set picking MODE` | Settings |
+| `echo TEXT`, `help` | Console |
+
+Atom expressions: `all none * selected displayed protein nucleic dna rna polymer water hetero
+ligand backbone sidechain helix sheet`, element names and `_Sym`, residue specs
+`[RES]num-num:chain.atom` (any part optional, `*` wildcard), comparisons on `atomno resno elemno
+temperature occupancy formalCharge x y z` and `element chain group atomname`, `within(d, EXPR)`,
+combined with `not ! and & or | ,` and parentheses.
+
+### Differences from Jmol
+
+MolScope implements a subset. Not supported: surfaces and isosurfaces, `dots`, the full `set`
+vocabulary, `define`, variables and flow control, `write`, model kit editing, minimisation, PDB
+biological assemblies, mmCIF, and Jmol's DSSP. Integer `spacefill n` uses RasMol units
+(n/250 Å) as Jmol does.

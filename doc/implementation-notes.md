@@ -1,135 +1,80 @@
-# Implementation Notes - SceneryStack Template
+# MolScope — implementation notes
 
-Developer-facing notes on the **SceneryStackTemplate** scaffold. **Replace and expand this file when
-forking** to describe your sim's real architecture (see Stern Gerlach or Light Propagation for
-target quality). Until then, this documents what the template provides out of the box.
-
-## Architecture Overview
-
-SceneryStackTemplate is the fleet-canonical starting point for new SceneryStack sims (one or N screens).
-It demonstrates Model–View separation, color profiles, localization, reset behavior, accessibility
-reference wiring, and reusable common components — **without** domain physics.
+## Layers
 
 ```
-main.ts
-  └─ SimScreen             (Screen<SimModel, SimScreenView>)
-       ├─ SimModel          state + logic  (src/sim-screen/model/)  ← stub: add physics here
-       └─ SimScreenView     visuals        (src/sim-screen/view/)
-            ├─ SimScreenSummaryContent     (PDOM overview — reference a11y pattern)
-            └─ SimKeyboardHelpContent      (keyboard help dialog)
-
-src/common/
-  ├─ SimPanel.ts           pre-themed panel (uses SimColors)
-  ├─ SimButtonOptions.ts   flat button / combo-box option bundles
-  └─ TimeModel.ts          composable play/pause + elapsed time
-
-src/preferences/
-  ├─ SimPreferencesModel   sim-specific pref state
-  ├─ SimPreferencesNode    pref UI in Preferences → Simulation
-  └─ simQueryParameters    QueryStringMachine declarations
+src/common/model/   pure data + algorithms (parsers, bonding, selection, scripts, geometry)
+  ViewerModel.ts    the only reactive (axon) class; implements ScriptTarget
+src/common/view/    renderer, viewer node, panels, console, shared screen view
+src/<screen>/       thin subclasses choosing a library and menus
 ```
 
-Data flows Model → View through AXON `Property` objects (`.link()` / `.lazyLink()`). The view never
-integrates physics; the model never imports scenery.
+`ViewerModel` is the single entry point for every user action. The control panel, the mouse
+modes, the keyboard cursor and `ScriptEngine` all call its methods, so there is one code path per
+operation. `ScriptEngine` never formats text: it returns `ScriptMessage { key, args, isError }`
+and `formatters.formatScriptMessage` localises it.
 
-## Forking checklist
+## Rendering
 
-### Automated rename + scaffold (recommended)
+`MoleculeRenderer` is a painter's-algorithm renderer on a 2D canvas, close to how Jmol's own
+software renderer works:
 
-```sh
-npm run rename -- --id my-sim --name "My Simulation"
-npm run scaffold-screens -- --screens Intro,Lab   # or omit --screens for one screen
-npm run check
-```
+1. **Project.** Rotate each atom about the rotation centre (`Rotation3`, row-major, composed on
+   the left so drags turn about screen axes), apply perspective f = D / (D − z) with D = 3 × the
+   bounding radius (Jmol's `cameraDepth`), scale so the bounding sphere fits the viewport at zoom 1.
+2. **Build primitives** into a pooled item list, each tagged with view-space depth: spheres,
+   bond halves (split at the midpoint when the end colours differ; multiple bonds offset
+   perpendicular in screen space; trimmed to start at the sphere surface), ribbon quads, tubes,
+   polyhedron faces, dashed hydrogen bonds.
+3. **Sort** back to front and paint. Spheres are `drawImage` of a radial-gradient sprite cached
+   per colour (flushed past 512 colours, for continuous schemes). Cylinders are three concentric
+   strokes (rim, body, highlight). Ribbons are flat quads shaded by |n·z|.
+4. **Overlays** on top: halos, pick rings, labels, measurements, unit cell, axis gizmo.
 
-Or from the workspace: `Baton/scripts/create-sim.sh --repo MySim --name "My Simulation"`.
+Hemoglobin (4,779 atoms) holds ~50–60 fps while spinning in every style in headless Chromium.
+The painter's algorithm is approximate where large primitives interpenetrate (a long bond through
+a big sphere); Jmol's z-buffer is exact. The trims at sphere surfaces hide most of it.
 
-`scripts/rename-sim.ts` updates sim-level identifiers (package id, Colors, Preferences).
-`scripts/scaffold-screens.ts` emits fleet-named screen folders and wires main/strings/icons.
+The last projection is kept for picking (`pick(x, y)` returns the front-most atom whose disc
+contains the point, with a 6 px minimum so wireframe atoms stay clickable).
 
-### Manual steps (after rename/scaffold or if skipping the scripts)
+### Cartoons
 
-1. **`doc/model.md`** — educator physics (equations, ranges, simplifications).
-2. **`doc/implementation-notes.md`** — this file, rewritten for your architecture.
-3. **Screen model(s)** — real Properties, `step(dt)`, `reset()`; compose `TimeModel` if animated.
-4. **Screen view(s)** — play area + controls; wire `ResetAllButton` to `model.reset()`.
-5. **`*Colors.ts`** — sim palette (default + projector profiles).
-6. **Locale JSON** — title, strings, `a11y` keys; register locales in `init.ts`.
-7. **`public/icons/icon.svg`** → `npm run icons`; align theme color in `index.html` / vite config.
-8. **`tests/setup.ts`** — `init({ name: … })` must match `package.json` name after rename.
-9. **`AGENTS.md`** — sim-specific file map and pitfalls for AI assistants.
+`CartoonGeometry.buildPolymerPaths` runs once per structure and frame. Consecutive residues with
+a lead atom (Cα, or P/C4′ for nucleotides) form runs, broken at chain changes and gaps (> 4.5 Å
+Cα–Cα, > 8.5 Å P–P). Each run gets a Catmull–Rom spline with 6 samples per residue. The guide
+vector is Cα→O orthogonalised against the tangent and sign-aligned with its predecessor, which is
+what makes sheets flat instead of pleated. Interval *k* takes the secondary structure of residue
+*k*: helix half-width 1.25 Å, sheet 1.1 Å tapering from 1.8 Å to a point over a strand's last
+residue, otherwise a 0.3 Å tube. Nucleic acids draw a tube plus a rung to N1 (purines) / N3
+(pyrimidines).
 
-## Common components (keep when forking)
+## Input
 
-### SimPanel
+`MoleculeViewerNode` uses a raw scenery input listener rather than `DragListener` because it needs
+modifiers at press time and click-versus-drag detection (4 px slop). During a press it attaches a
+listener to the pointer and **always** detaches it on release, cancel and interrupt — touch
+pointers are disposed after those events, and scenery asserts if listeners remain (the fuzz test
+catches this).
 
-Every control panel should use `SimPanel` so projector-mode switching is automatic:
+The structure combo box would outgrow the 618 px layout with 39 molecules, so the library is split
+into collections: one combo per collection, only one visible, each with its own `Property` whose
+value is always one of its items (`custom` when the structure came from elsewhere).
 
-```typescript
-import { SimPanel } from "../../common/SimPanel.js";
-const panel = new SimPanel(content);
-const panelWide = new SimPanel(content, { xMargin: 20 });
-```
+## Script console
 
-### TimeModel
+The text field is a real `<input>` in a scenery `DOM` node (`allowInput: true`), so typing, paste,
+IME and screen readers behave natively. Key events stop propagating so the sim's global hotkeys
+don't fire while typing. Up/down walk a 50-command history.
 
-Compose into your screen model for animation (do not subclass `TimeModel`):
+## Data loading
 
-```typescript
-export class MyModel implements TModel {
-  public readonly timer = new TimeModel();  // pass true to auto-play on startup
+Library files are imported with `import.meta.glob("./data/*", { query: "?raw" })`, so Vite emits
+one lazily loaded chunk per file and Workbox precaches them for offline use; the single-file build
+inlines them. Remote loads go through `RemoteSources.fetchText`, replaceable via
+`ViewerModelOptions.fetchText` for tests. A load token discards stale results when loads overlap.
 
-  public step(dt: number): void {
-    this.timer.step(dt);
-    // physics uses this.timer.timeProperty.value
-  }
-  public reset(): void { this.timer.reset(); /* restore initial state */ }
-}
-```
+## Disposal
 
-Wire `TimeControlNode` to `model.timer.isPlayingProperty` in the view.
-
-### SimButtonOptions
-
-Spread flat button options into every push/round button and `TimeControlNode` (see `AGENTS.md`).
-Use `SIM_COMBO_BOX_OPTIONS` + `LIGHT_SURFACE_TEXT_FILL` for light control surfaces on dark panels.
-
-## Accessibility (reference implementation)
-
-The template is the **canonical OpenLyceum a11y reference**:
-
-- PDOM `accessibleName` on interactive nodes (prefer live `StringProperty`s).
-- `SimScreenSummaryContent` with a live `currentDetailsContent` `DerivedProperty` over model state.
-- Explicit `pdomOrder` + `SimKeyboardHelpContent`.
-- Strings under `a11y` in locale JSON → `StringManager.getA11yStrings()`.
-
-Full checklist: [Baton/ACCESSIBILITY.md](https://github.com/OpenLyceum/Baton/blob/main/ACCESSIBILITY.md).
-
-## Testing (fleet layout — keep when forking)
-
-| Path | Purpose |
-|---|---|
-| `vitest.config.ts` | `happy-dom`; `setupFiles: ["./tests/setup.ts"]`; `execArgv: ["--expose-gc"]` |
-| `tests/setup.ts` | Canvas/AudioContext mocks + `init()` before SceneryStack imports |
-| `tests/TimeModel.test.ts` | **Replace** with real model/physics tests mirroring `src/` |
-| `tests/memory-leak.test.ts` | WeakRef + `forceGC` dispose regression |
-| `tests/fuzz/fuzz.spec.ts` | Optional Playwright smoke via `?fuzz` |
-
-Run `npm test`. Expand `memory-leak.test.ts` when adding runtime-created nodes or Property links.
-
-## Multi-screen simulations
-
-Default is single-screen. To add screens, see **`doc/multi-screen.md`**: per-screen folders mirroring
-`src/sim-screen/`, `StringManager` screen-name getters, optional shared root model, a shared
-`src/common/{SimName}ScreenIcons.ts` module (`create{Screen}Icon()` factories wired as
-`homeScreenIcon` / `navigationBarIcon`), and register all screens in `main.ts`.
-
-## PWA
-
-After `npm run build`, the sim is installable offline via Workbox (`dist/manifest.webmanifest`).
-
-## Known template stubs (remove when forking)
-
-- `SimModel.step()` / `reset()` — empty placeholders until you add physics.
-- Placeholder play-area content in `SimScreenView` — replace with real UI.
-- `tests/TimeModel.test.ts` — sample only; add tests for your model under `tests/`.
+Panels dispose their own content after `super.dispose()` with `disposeSubtree` — see the leak
+gotcha in `AGENTS.md`. Screen views live for the whole sim and are not disposed.

@@ -1,26 +1,44 @@
-# SceneryStack Template
+# MolScope
 
 [![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
-A reusable SceneryStack simulation template for one or N screens, built with
-[SceneryStack](https://scenerystack.org/), Vite 8, TypeScript 7, and Biome 2.
+A browser molecular viewer in the spirit of [Jmol](https://jmol.sourceforge.net/): explore small
+molecules, proteins, DNA and crystals in 3D, measure bond lengths and angles, and drive the view
+with Jmol-style scripts. Built with [SceneryStack](https://scenerystack.org/), it runs offline as a
+Progressive Web App.
 
 ## Features
 
-- SceneryStack scaffold with model/view separation (`rename` + `scaffold-screens` for one or N screens)
-- English, Spanish, and French localization via `StringManager`
-- Default and projector color profiles
-- Progressive Web App (installable, offline-capable)
-- Git hooks for Biome pre-commit checks
-- Shared GitHub Actions CI via `OpenLyceum/Baton`
+- **Three screens.** *Molecules* (39 structures in five collections, including VSEPR shapes,
+  vibrational modes of H₂O and CO₂, and an ethane torsion scan), *Biomolecules* (crambin,
+  ubiquitin, insulin, GFP, trypsin–inhibitor, two hemoglobins, B-DNA) and *Crystals* (rock salt,
+  CsCl, diamond, graphite, quartz, rutile, fluorite, zinc blende, wurtzite, perovskite, Cu, Fe).
+- **Open your own files:** PDB, MOL/SDF, XYZ (including trajectories and vibration vectors) and
+  CIF with full symmetry expansion, from a dialog or by drag-and-drop.
+- **Fetch from databases** like Jmol: `load $aspirin` (PubChem 3D) and `load =1hho` (RCSB PDB).
+- **Rendering styles:** wireframe, sticks, ball & stick, space-filling, cartoon (helices,
+  arrowed β-strands, nucleic-acid ladders), trace and backbone — mixable per atom.
+- **Colour schemes:** element (CPK), chain, secondary structure, B-factor, residue type,
+  N→C rainbow and formal charge; multiple bonds from MOL files are drawn.
+- **Mouse modes:** rotate, identify, distance, angle, torsion, select and centre; hover tooltips;
+  measurement list.
+- **Script console** with a Jmol-compatible subset: `select`, `restrict`, `display`/`hide`,
+  `spacefill`, `wireframe`, `cartoon`, `color`, `label`, `measure`, `spin`, `rotate`, `zoom`,
+  `center`, `hbonds`, `unitcell`, `polyhedra`, `frame`, `animation`, `vibration`, `set`, and the
+  atom-expression language (`protein and not water`, `[HEM]`, `10-20:A.CA`, `within(5, ligand)`).
+- **Crystals:** packed 1×1×1 to 3×3×3 cells, unit-cell box, coordination polyhedra.
+- **Accessible:** full keyboard operation (including stepping through atoms to measure),
+  live screen summaries, projector colour profile, English / French / Spanish.
 
 ## Quick Start
 
 ```bash
 npm install
-npm run icons    # generate PNG icons from public/icons/icon.svg
 npm start        # dev server → http://localhost:5173
 ```
+
+Then open a screen, drag to rotate, scroll to zoom, and try `select ligand; spacefill on` in the
+script box on the Biomolecules screen.
 
 ## Scripts
 
@@ -28,23 +46,17 @@ npm start        # dev server → http://localhost:5173
 |---|---|
 | `npm start` / `npm run dev` | Start Vite dev server |
 | `npm run build` | Type-check + production build → `dist/` |
+| `npm run build:single` | Single self-contained `dist/index.html` |
 | `npm run preview` | Preview the production build locally |
-| `npm test` | Run Vitest unit tests (includes memory-leak suite) |
-| `npm run test:fuzz` | Optional Playwright fuzz smoke: pointer (`?fuzz`) + keyboard (`?fuzzBoard`), with `?ea`, 30s each |
-| `npm run test:fuzz -- 90` | Same fuzz for 90 seconds (`--duration 90` or `FUZZ_DURATION=90` also work) |
-| `npm run test:fuzz:quick` | Shorter fuzz smoke (10s) |
-| `npm run test:fuzz:long` | Longer fuzz smoke (300s) |
+| `npm test` | Vitest unit tests (parsers, selection language, script engine, memory leaks) |
+| `npm run test:fuzz` / `:quick` / `:long` | Playwright fuzz smoke, pointer + keyboard (30 s / 10 s / 300 s) |
 | `npm run check` | TypeScript type check |
 | `npm run lint` | Biome lint check |
 | `npm run format` | Auto-format all files |
 | `npm run fix` | Lint + auto-fix |
 | `npm run icons` | Regenerate PNG icons from `public/icons/icon.svg` |
-| `npm run rename` | Sim-level fork/rename (`--id`, `--name`) |
-| `npm run scaffold-screens` | Emit N fleet-named screen packages from `sim-screen/` (`--shared-model` optional) |
 | `npm run release` | `check && lint && build && test`, then version patch + push tags |
 | `npm run clean` | Remove `dist/` |
-
-New sims start at `version: "0.0.0"` in `package.json`. Bump only when cutting a release (for example `npm version patch` and a matching git tag). Keep `name` in kebab-case; it is separate from the SceneryStack sim identifier in `src/init.ts`, which reads its `version` from `package.json`.
 
 ## Tech Stack
 
@@ -55,6 +67,9 @@ New sims start at `version: "0.0.0"` in `package.json`. Bump only when cutting a
 | [TypeScript](https://www.typescriptlang.org/) | ^7 | Type-safe JavaScript |
 | [Biome](https://biomejs.dev/) | ^2.5 | Linting + formatting |
 | [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) | ^2 | PWA + service worker |
+
+Structure data comes from PubChem, the RCSB Protein Data Bank and the Crystallography Open
+Database (all public domain); see [CREDITS.md](CREDITS.md).
 
 ## License
 

@@ -1,21 +1,248 @@
 {
-  "title": "Modèle de Simulation",
+  "title": "MolScope",
   "screens": {
-    "sim": "Simulation"
+    "molecules": "Molécules",
+    "biomolecules": "Biomolécules",
+    "crystals": "Cristaux"
+  },
+  "controls": {
+    "structure": "Structure",
+    "collection": "Collection",
+    "openFile": "Ouvrir un fichier…",
+    "style": "Style",
+    "color": "Couleur",
+    "labels": "Étiquettes",
+    "display": "Affichage",
+    "hydrogens": "Hydrogènes",
+    "spin": "Rotation auto",
+    "perspective": "Perspective",
+    "hydrogenBonds": "Liaisons hydrogène",
+    "unitCell": "Maille",
+    "axes": "Axes",
+    "polyhedra": "Polyèdres",
+    "vibrate": "Vibrer",
+    "animate": "Animer",
+    "cells": "Mailles",
+    "frame": "Image {{n}} / {{count}}",
+    "previousFrame": "Image précédente",
+    "nextFrame": "Image suivante",
+    "resetView": "Réinitialiser la vue",
+    "mouse": "Souris",
+    "clearMeasurements": "Effacer",
+    "measurements": "Mesures",
+    "console": "Script",
+    "run": "Exécuter",
+    "consolePlaceholder": "Commande Jmol, p. ex. select carbon; color orange; spin on",
+    "custom": "(fichier ouvert)"
+  },
+  "groups": {
+    "basics": "Petites molécules",
+    "shapes": "Géométries moléculaires",
+    "biochemistry": "Biochimie",
+    "drugs": "Médicaments et produits naturels",
+    "motion": "Vibrations et mouvements",
+    "biomolecules": "Protéines et ADN",
+    "crystals": "Cristaux"
+  },
+  "styles": {
+    "wireframe": "Fil de fer",
+    "sticks": "Bâtonnets",
+    "ballAndStick": "Boules et bâtonnets",
+    "spacefill": "Compact (CPK)",
+    "cartoon": "Cartoon",
+    "trace": "Trace",
+    "backbone": "Squelette"
+  },
+  "colorSchemes": {
+    "cpk": "Élément (CPK)",
+    "chain": "Chaîne",
+    "structure": "Structure secondaire",
+    "temperature": "Facteur B",
+    "amino": "Type de résidu",
+    "group": "Arc-en-ciel N→C",
+    "formalCharge": "Charge formelle"
+  },
+  "labelModes": {
+    "none": "Aucune",
+    "element": "Élément",
+    "name": "Nom d'atome",
+    "number": "Numéro d'atome",
+    "residue": "Résidu"
+  },
+  "picking": {
+    "rotate": "Tourner",
+    "identify": "Identifier",
+    "distance": "Distance",
+    "angle": "Angle",
+    "torsion": "Torsion",
+    "select": "Sélectionner",
+    "center": "Centrer"
+  },
+  "hints": {
+    "rotate": "Glisser pour tourner · molette ou maj-glisser pour zoomer · ctrl-glisser pour déplacer",
+    "identify": "Cliquez sur un atome pour l'identifier",
+    "distance": "Cliquez sur deux atomes pour mesurer une distance",
+    "angle": "Cliquez sur trois atomes pour mesurer un angle",
+    "torsion": "Cliquez sur quatre atomes pour mesurer un angle de torsion",
+    "select": "Cliquez sur des atomes pour les (dé)sélectionner",
+    "center": "Cliquez sur un atome pour tourner autour de lui",
+    "drop": "Déposez un fichier PDB, MOL/SDF, XYZ ou CIF pour l'ouvrir"
+  },
+  "info": {
+    "atomsBonds": "{{atoms}} atomes · {{bonds}} liaisons",
+    "residuesChains": "Résidus : {{residues}} · Chaînes : {{chains}}",
+    "molarMass": "{{value}} g/mol",
+    "cell": "a {{a}} b {{b}} c {{c}} Å",
+    "cellAngles": "α {{alpha}}° β {{beta}}° γ {{gamma}}°",
+    "spaceGroup": "Groupe d'espace {{name}}",
+    "selected": "{{count}} sélectionnés",
+    "atom": "{{name}} · {{element}} n°{{serial}}",
+    "residue": "{{residue}} {{number}} chaîne {{chain}}",
+    "position": "({{x}} ; {{y}} ; {{z}}) Å",
+    "picks": "{{count}} atome(s) sur {{needed}}",
+    "loading": "Chargement…",
+    "loadError": "Chargement impossible : {{reason}}",
+    "noStructure": "Aucune structure chargée"
+  },
+  "units": {
+    "angstroms": "{{value}} Å",
+    "degrees": "{{value}}°"
+  },
+  "axisLabels": {
+    "x": "x",
+    "y": "y",
+    "z": "z",
+    "origin": "o",
+    "a": "a",
+    "b": "b",
+    "c": "c"
+  },
+  "script": {
+    "selected": "{{count}} atomes sélectionnés",
+    "loaded": "{{title}} chargé ({{count}} atomes)",
+    "loading": "Chargement…",
+    "measured": "{{value}}",
+    "echo": "{{text}}",
+    "help": "Commandes : {{commands}}",
+    "unknownCommand": "Commande inconnue : {{command}}",
+    "badSelection": "Sélection illisible près de « {{token}} »",
+    "badArgument": "Argument invalide : {{argument}}",
+    "noStructure": "Aucune structure n'est chargée",
+    "loadFailed": "Échec du chargement : {{reason}}"
+  },
+  "keyboardHelp": {
+    "viewerHeading": "Visualiseur",
+    "rotate": "Tourner la structure",
+    "roll": "Tourner autour de l'axe de vue",
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière",
+    "resetView": "Réinitialiser la vue",
+    "nextAtom": "Atome suivant",
+    "previousAtom": "Atome précédent",
+    "pickAtom": "Choisir l'atome courant"
+  },
+  "library": {
+    "water": "Eau",
+    "ammonia": "Ammoniac",
+    "methane": "Méthane",
+    "formaldehyde": "Formaldéhyde",
+    "hydrogenPeroxide": "Peroxyde d'hydrogène",
+    "carbonDioxide": "Dioxyde de carbone",
+    "ethylene": "Éthylène",
+    "acetylene": "Acétylène",
+    "ethanol": "Éthanol",
+    "aceticAcid": "Acide acétique",
+    "urea": "Urée",
+    "benzene": "Benzène",
+    "cyclohexane": "Cyclohexane",
+    "sulfurHexafluoride": "Hexafluorure de soufre (SF₆)",
+    "phosphorusPentachloride": "Pentachlorure de phosphore (PCl₅)",
+    "xenonTetrafluoride": "Tétrafluorure de xénon (XeF₄)",
+    "glycine": "Glycine",
+    "alanine": "Alanine",
+    "phenylalanine": "Phénylalanine",
+    "glucose": "Glucose",
+    "sucrose": "Saccharose",
+    "ascorbicAcid": "Acide ascorbique (vitamine C)",
+    "caffeine": "Caféine",
+    "nicotine": "Nicotine",
+    "aspirin": "Aspirine",
+    "paracetamol": "Paracétamol",
+    "ibuprofen": "Ibuprofène",
+    "dopamine": "Dopamine",
+    "serotonin": "Sérotonine",
+    "capsaicin": "Capsaïcine",
+    "morphine": "Morphine",
+    "penicillinG": "Pénicilline G",
+    "testosterone": "Testostérone",
+    "cholesterol": "Cholestérol",
+    "adenosineTriphosphate": "Adénosine triphosphate (ATP)",
+    "buckminsterfullerene": "Buckminsterfullerène (C₆₀)",
+    "waterVibrations": "Eau — modes de vibration",
+    "carbonDioxideVibrations": "Dioxyde de carbone — modes de vibration",
+    "ethaneRotation": "Éthane — rotation interne",
+    "crambin": "Crambine (1CRN)",
+    "ubiquitin": "Ubiquitine (1UBQ)",
+    "insulin": "Insuline (4INS)",
+    "greenFluorescentProtein": "Protéine fluorescente verte (1EMA)",
+    "trypsinInhibitor": "Trypsine + inhibiteur (2PTC)",
+    "oxyhemoglobin": "Oxyhémoglobine (1HHO)",
+    "deoxyhemoglobin": "Désoxyhémoglobine (4HHB)",
+    "dnaDodecamer": "Dodécamère d'ADN (1BNA)",
+    "sodiumChloride": "Chlorure de sodium (halite)",
+    "cesiumChloride": "Chlorure de césium",
+    "diamond": "Diamant",
+    "graphite": "Graphite",
+    "quartz": "Quartz α (SiO₂)",
+    "rutile": "Rutile (TiO₂)",
+    "fluorite": "Fluorine (CaF₂)",
+    "zincBlende": "Blende (ZnS)",
+    "wurtzite": "Wurtzite (ZnS)",
+    "perovskite": "Pérovskite (CaTiO₃)",
+    "copper": "Cuivre (cfc)",
+    "iron": "Fer (cc)"
   },
   "a11y": {
-    "screenSummary": {
-      "playArea": "La zone de jeu affiche le contenu principal de la simulation.",
-      "controlArea": "La zone de contrôle comporte un bouton Tout réinitialiser qui ramène la simulation à son état initial.",
-      "interactionHint": "Explorez la simulation en interagissant avec ses commandes."
+    "common": {
+      "viewer": "Visualiseur de molécule",
+      "viewerHelp": "Les flèches font tourner, plus et moins zooment, N et P parcourent les atomes, Entrée choisit l'atome courant.",
+      "structureSelector": "Structure",
+      "groupSelector": "Collection de structures",
+      "styleSelector": "Style de rendu",
+      "colorSelector": "Palette de couleurs",
+      "labelSelector": "Étiquettes des atomes",
+      "pickingMode": "Action de la souris",
+      "openFile": "Ouvrir un fichier de structure",
+      "consoleInput": "Commande de script Jmol",
+      "currentAtom": "Atome courant : {{description}}",
+      "measurementAdded": "Mesure : {{value}}",
+      "details": "{{title}} : {{atoms}} atomes, style {{style}}, couleurs par {{scheme}}.",
+      "detailsNone": "Aucune structure n'est chargée."
     },
-    "currentDetails": "La simulation est dans son état initial.",
-    "controls": {
-      "exampleControl": "Contrôle d'exemple"
+    "molecules": {
+      "screenSummary": {
+        "playArea": "Un visualiseur 3D montre une petite molécule en boules, bâtonnets ou sphères compactes. Les atomes sont colorés par élément : carbone gris, oxygène rouge, azote bleu, hydrogène blanc.",
+        "controlArea": "Choisissez une molécule, un style, des couleurs et des étiquettes ; mesurez distances et angles ; exécutez des commandes de script Jmol.",
+        "interactionHint": "Placez le focus sur le visualiseur et utilisez les flèches pour tourner la molécule."
+      }
+    },
+    "biomolecules": {
+      "screenSummary": {
+        "playArea": "Un visualiseur 3D montre une protéine ou un acide nucléique en cartoon d'hélices et de brins, avec les ligands en boules et bâtonnets.",
+        "controlArea": "Choisissez une structure, un style et une coloration (chaîne, structure secondaire, type de résidu, facteur B) ; affichez les liaisons hydrogène ; sélectionnez des atomes avec des expressions Jmol.",
+        "interactionHint": "Essayez la commande : select ligand; spacefill on"
+      }
+    },
+    "crystals": {
+      "screenSummary": {
+        "playArea": "Un visualiseur 3D montre un cristal empilé dans une ou plusieurs mailles, dont les arêtes forment une boîte.",
+        "controlArea": "Choisissez un cristal, le nombre de mailles et l'affichage des polyèdres de coordination et de la maille.",
+        "interactionHint": "Activez les polyèdres pour la pérovskite afin de voir les octaèdres TiO₆."
+      }
     }
   },
   "preferences": {
     "title": "Simulation",
-    "exampleToggle": "Exemple de bascule"
+    "perspective": "Projection en perspective"
   }
 }

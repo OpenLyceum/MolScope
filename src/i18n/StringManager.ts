@@ -46,32 +46,6 @@ const stringProperties = LocalizedString.getNestedStringProperties({
 });
 
 /**
- * Explicit `a11y` shape exposed by {@link StringManager.getA11yStrings}.
- * Keep this in sync with the `a11y` key in `strings_en.json` — a locale key
- * rename that is not mirrored here fails at the getter return (not silently).
- */
-export type SimA11yStrings = {
-  readonly screenSummary: {
-    readonly playAreaStringProperty: ReadOnlyProperty<string>;
-    readonly controlAreaStringProperty: ReadOnlyProperty<string>;
-    readonly interactionHintStringProperty: ReadOnlyProperty<string>;
-  };
-  readonly currentDetailsStringProperty: ReadOnlyProperty<string>;
-  readonly controls: {
-    readonly exampleControlStringProperty: ReadOnlyProperty<string>;
-  };
-};
-
-/**
- * Explicit Preferences → Simulation labels from {@link StringManager.getPreferences}.
- * Same sync rule as {@link SimA11yStrings}.
- */
-export type SimPreferenceStrings = {
-  readonly titleStringProperty: ReadOnlyProperty<string>;
-  readonly exampleToggleStringProperty: ReadOnlyProperty<string>;
-};
-
-/**
  * StringManager is a singleton that provides typed access to all localized
  * strings. Use `StringManager.getInstance()` everywhere — never construct it
  * directly.
@@ -103,34 +77,106 @@ export class StringManager {
    * Each property updates automatically when the locale changes.
    */
   public getScreenNames(): {
-    readonly simStringProperty: ReadOnlyProperty<string>;
+    readonly moleculesStringProperty: ReadOnlyProperty<string>;
+    readonly biomoleculesStringProperty: ReadOnlyProperty<string>;
+    readonly crystalsStringProperty: ReadOnlyProperty<string>;
   } {
     return {
-      simStringProperty: stringProperties.screens.simStringProperty,
+      moleculesStringProperty: stringProperties.screens.moleculesStringProperty,
+      biomoleculesStringProperty: stringProperties.screens.biomoleculesStringProperty,
+      crystalsStringProperty: stringProperties.screens.crystalsStringProperty,
     };
   }
 
-  /**
-   * Accessibility (Interactive Description) StringProperties.
-   *
-   * Returns the reactive `a11y` string tree used by the parallel DOM:
-   *   - `screenSummary.*` — play-area / control-area overview and an interaction
-   *     hint, read by `SimScreenSummaryContent`.
-   *   - `currentDetails` — a paragraph describing the simulation's current state.
-   *     In a real sim, derive a live version from model Properties (see
-   *     LunarLander's ScreenSummaryContent for the canonical pattern).
-   *
-   * Add `accessibleName` / `accessibleHelpText` strings for individual controls
-   * to the `a11y` group too, then read them through this same nested tree.
-   */
-  public getA11yStrings(): SimA11yStrings {
-    return stringProperties.a11y;
+  /** Shared accessibility strings (viewer, selectors, live details). */
+  public getCommonA11yStrings() {
+    return stringProperties.a11y.common;
+  }
+
+  /** Accessibility strings for the Molecules screen. */
+  public getMoleculesA11yStrings() {
+    return stringProperties.a11y.molecules;
+  }
+
+  /** Accessibility strings for the Biomolecules screen. */
+  public getBiomoleculesA11yStrings() {
+    return stringProperties.a11y.biomolecules;
+  }
+
+  /** Accessibility strings for the Crystals screen. */
+  public getCrystalsA11yStrings() {
+    return stringProperties.a11y.crystals;
+  }
+
+  /** Control-panel labels. */
+  public getControls() {
+    return stringProperties.controls;
+  }
+
+  /** Structure-collection names, keyed by LibraryGroup value. */
+  public getGroups() {
+    return stringProperties.groups;
+  }
+
+  /** Rendering-style names, keyed by DisplayStyle value. */
+  public getStyles() {
+    return stringProperties.styles;
+  }
+
+  /** Colour-scheme names, keyed by ColorScheme value. */
+  public getColorSchemes() {
+    return stringProperties.colorSchemes;
+  }
+
+  /** Label-mode names, keyed by LabelMode value. */
+  public getLabelModes() {
+    return stringProperties.labelModes;
+  }
+
+  /** Mouse picking-mode names, keyed by PickingMode value. */
+  public getPickingModes() {
+    return stringProperties.picking;
+  }
+
+  /** One-line usage hints per picking mode. */
+  public getHints() {
+    return stringProperties.hints;
+  }
+
+  /** Info-panel patterns. */
+  public getInfo() {
+    return stringProperties.info;
+  }
+
+  /** Measurement unit patterns. */
+  public getUnits() {
+    return stringProperties.units;
+  }
+
+  /** Axis and unit-cell corner labels drawn in the viewer. */
+  public getAxisLabels() {
+    return stringProperties.axisLabels;
+  }
+
+  /** Script-console message patterns, keyed by ScriptMessageKey. */
+  public getScriptMessages() {
+    return stringProperties.script;
+  }
+
+  /** Keyboard-help dialog labels. */
+  public getKeyboardHelp() {
+    return stringProperties.keyboardHelp;
+  }
+
+  /** Display names for the built-in structure library, keyed by LibraryEntry.nameKey. */
+  public getLibraryNames() {
+    return stringProperties.library;
   }
 
   /**
    * Simulation-specific preference labels shown in Preferences → Simulation.
    */
-  public getPreferences(): SimPreferenceStrings {
+  public getPreferences() {
     return stringProperties.preferences;
   }
 }

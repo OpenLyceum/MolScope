@@ -40,8 +40,8 @@ const securityHeaders: Record<string, string> = {
     // data: for icons
     "img-src 'self' data:",
     "media-src 'self' blob:",
-    // blob: for fetch inside workers
-    "connect-src 'self' blob:",
+    // blob: for fetch inside workers; PubChem and RCSB for `load $name` / `load =pdbid`
+    "connect-src 'self' blob: https://pubchem.ncbi.nlm.nih.gov https://files.rcsb.org",
     "font-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -198,9 +198,9 @@ export default defineConfig(({ mode }) => {
             includeAssets: ["favicon.ico", "icons/apple-touch-icon.png"],
             manifest: {
               id: name,
-              name: "SceneryStack Template",
+              name: "MolScope",
               // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
-              short_name: "SimTemplate",
+              short_name: "MolScope",
               description,
               categories: ["education", "science"],
               // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
@@ -237,7 +237,7 @@ export default defineConfig(({ mode }) => {
                   type: "image/png",
                   // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
                   form_factor: "wide",
-                  label: "SceneryStack Template",
+                  label: "MolScope",
                 },
                 {
                   src: "screenshots/narrow.png",
@@ -245,7 +245,7 @@ export default defineConfig(({ mode }) => {
                   type: "image/png",
                   // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
                   form_factor: "narrow",
-                  label: "SceneryStack Template",
+                  label: "MolScope",
                 },
               ],
             },

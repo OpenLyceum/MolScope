@@ -1,21 +1,248 @@
 {
-  "title": "SceneryStack Template",
+  "title": "MolScope",
   "screens": {
-    "sim": "Sim"
+    "molecules": "Molecules",
+    "biomolecules": "Biomolecules",
+    "crystals": "Crystals"
+  },
+  "controls": {
+    "structure": "Structure",
+    "collection": "Collection",
+    "openFile": "Open File…",
+    "style": "Style",
+    "color": "Color",
+    "labels": "Labels",
+    "display": "Display",
+    "hydrogens": "Hydrogens",
+    "spin": "Spin",
+    "perspective": "Perspective",
+    "hydrogenBonds": "Hydrogen bonds",
+    "unitCell": "Unit cell",
+    "axes": "Axes",
+    "polyhedra": "Polyhedra",
+    "vibrate": "Vibrate",
+    "animate": "Animate",
+    "cells": "Cells",
+    "frame": "Frame {{n}} / {{count}}",
+    "previousFrame": "Previous frame",
+    "nextFrame": "Next frame",
+    "resetView": "Reset View",
+    "mouse": "Mouse",
+    "clearMeasurements": "Clear",
+    "measurements": "Measurements",
+    "console": "Script",
+    "run": "Run",
+    "consolePlaceholder": "Jmol command, e.g. select carbon; color orange; spin on",
+    "custom": "(opened file)"
+  },
+  "groups": {
+    "basics": "Small molecules",
+    "shapes": "Molecular shapes",
+    "biochemistry": "Biochemistry",
+    "drugs": "Drugs & natural products",
+    "motion": "Vibrations & motion",
+    "biomolecules": "Proteins & DNA",
+    "crystals": "Crystals"
+  },
+  "styles": {
+    "wireframe": "Wireframe",
+    "sticks": "Sticks",
+    "ballAndStick": "Ball & Stick",
+    "spacefill": "Space-filling",
+    "cartoon": "Cartoon",
+    "trace": "Trace",
+    "backbone": "Backbone"
+  },
+  "colorSchemes": {
+    "cpk": "Element (CPK)",
+    "chain": "Chain",
+    "structure": "Secondary structure",
+    "temperature": "B-factor",
+    "amino": "Residue type",
+    "group": "Rainbow N→C",
+    "formalCharge": "Formal charge"
+  },
+  "labelModes": {
+    "none": "None",
+    "element": "Element",
+    "name": "Atom name",
+    "number": "Atom number",
+    "residue": "Residue"
+  },
+  "picking": {
+    "rotate": "Rotate",
+    "identify": "Identify",
+    "distance": "Distance",
+    "angle": "Angle",
+    "torsion": "Torsion",
+    "select": "Select",
+    "center": "Center"
+  },
+  "hints": {
+    "rotate": "Drag to rotate · wheel or shift-drag to zoom · ctrl-drag to move",
+    "identify": "Click an atom to identify it",
+    "distance": "Click two atoms to measure a distance",
+    "angle": "Click three atoms to measure an angle",
+    "torsion": "Click four atoms to measure a torsion angle",
+    "select": "Click atoms to add or remove them from the selection",
+    "center": "Click an atom to rotate about it",
+    "drop": "Drop a PDB, MOL/SDF, XYZ or CIF file to open it"
+  },
+  "info": {
+    "atomsBonds": "{{atoms}} atoms · {{bonds}} bonds",
+    "residuesChains": "Residues: {{residues}} · Chains: {{chains}}",
+    "molarMass": "{{value}} g/mol",
+    "cell": "a {{a}} b {{b}} c {{c}} Å",
+    "cellAngles": "α {{alpha}}° β {{beta}}° γ {{gamma}}°",
+    "spaceGroup": "Space group {{name}}",
+    "selected": "{{count}} selected",
+    "atom": "{{name}} · {{element}} #{{serial}}",
+    "residue": "{{residue}} {{number}} chain {{chain}}",
+    "position": "({{x}}, {{y}}, {{z}}) Å",
+    "picks": "{{count}} of {{needed}} atoms picked",
+    "loading": "Loading…",
+    "loadError": "Could not load: {{reason}}",
+    "noStructure": "No structure loaded"
+  },
+  "units": {
+    "angstroms": "{{value}} Å",
+    "degrees": "{{value}}°"
+  },
+  "axisLabels": {
+    "x": "x",
+    "y": "y",
+    "z": "z",
+    "origin": "o",
+    "a": "a",
+    "b": "b",
+    "c": "c"
+  },
+  "script": {
+    "selected": "{{count}} atoms selected",
+    "loaded": "Loaded {{title}} ({{count}} atoms)",
+    "loading": "Loading…",
+    "measured": "{{value}}",
+    "echo": "{{text}}",
+    "help": "Commands: {{commands}}",
+    "unknownCommand": "Unknown command: {{command}}",
+    "badSelection": "Cannot read the selection near “{{token}}”",
+    "badArgument": "Bad argument: {{argument}}",
+    "noStructure": "No structure is loaded",
+    "loadFailed": "Load failed: {{reason}}"
+  },
+  "keyboardHelp": {
+    "viewerHeading": "Molecule Viewer",
+    "rotate": "Rotate the structure",
+    "roll": "Rotate about the view axis",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "resetView": "Reset the view",
+    "nextAtom": "Move to the next atom",
+    "previousAtom": "Move to the previous atom",
+    "pickAtom": "Pick the current atom"
+  },
+  "library": {
+    "water": "Water",
+    "ammonia": "Ammonia",
+    "methane": "Methane",
+    "formaldehyde": "Formaldehyde",
+    "hydrogenPeroxide": "Hydrogen peroxide",
+    "carbonDioxide": "Carbon dioxide",
+    "ethylene": "Ethylene",
+    "acetylene": "Acetylene",
+    "ethanol": "Ethanol",
+    "aceticAcid": "Acetic acid",
+    "urea": "Urea",
+    "benzene": "Benzene",
+    "cyclohexane": "Cyclohexane",
+    "sulfurHexafluoride": "Sulfur hexafluoride (SF₆)",
+    "phosphorusPentachloride": "Phosphorus pentachloride (PCl₅)",
+    "xenonTetrafluoride": "Xenon tetrafluoride (XeF₄)",
+    "glycine": "Glycine",
+    "alanine": "Alanine",
+    "phenylalanine": "Phenylalanine",
+    "glucose": "Glucose",
+    "sucrose": "Sucrose",
+    "ascorbicAcid": "Ascorbic acid (vitamin C)",
+    "caffeine": "Caffeine",
+    "nicotine": "Nicotine",
+    "aspirin": "Aspirin",
+    "paracetamol": "Paracetamol",
+    "ibuprofen": "Ibuprofen",
+    "dopamine": "Dopamine",
+    "serotonin": "Serotonin",
+    "capsaicin": "Capsaicin",
+    "morphine": "Morphine",
+    "penicillinG": "Penicillin G",
+    "testosterone": "Testosterone",
+    "cholesterol": "Cholesterol",
+    "adenosineTriphosphate": "Adenosine triphosphate (ATP)",
+    "buckminsterfullerene": "Buckminsterfullerene (C₆₀)",
+    "waterVibrations": "Water — vibrational modes",
+    "carbonDioxideVibrations": "Carbon dioxide — vibrational modes",
+    "ethaneRotation": "Ethane — internal rotation",
+    "crambin": "Crambin (1CRN)",
+    "ubiquitin": "Ubiquitin (1UBQ)",
+    "insulin": "Insulin (4INS)",
+    "greenFluorescentProtein": "Green fluorescent protein (1EMA)",
+    "trypsinInhibitor": "Trypsin + inhibitor (2PTC)",
+    "oxyhemoglobin": "Oxyhemoglobin (1HHO)",
+    "deoxyhemoglobin": "Deoxyhemoglobin (4HHB)",
+    "dnaDodecamer": "DNA dodecamer (1BNA)",
+    "sodiumChloride": "Sodium chloride (rock salt)",
+    "cesiumChloride": "Cesium chloride",
+    "diamond": "Diamond",
+    "graphite": "Graphite",
+    "quartz": "α-Quartz (SiO₂)",
+    "rutile": "Rutile (TiO₂)",
+    "fluorite": "Fluorite (CaF₂)",
+    "zincBlende": "Zinc blende (ZnS)",
+    "wurtzite": "Wurtzite (ZnS)",
+    "perovskite": "Perovskite (CaTiO₃)",
+    "copper": "Copper (fcc)",
+    "iron": "Iron (bcc)"
   },
   "a11y": {
-    "screenSummary": {
-      "playArea": "The play area shows the main simulation content.",
-      "controlArea": "The control area has a Reset All button that returns the simulation to its starting state.",
-      "interactionHint": "Explore the simulation by interacting with its controls."
+    "common": {
+      "viewer": "Molecule viewer",
+      "viewerHelp": "Arrow keys rotate, plus and minus zoom, N and P step through atoms, Enter picks the current atom.",
+      "structureSelector": "Structure",
+      "groupSelector": "Structure collection",
+      "styleSelector": "Rendering style",
+      "colorSelector": "Color scheme",
+      "labelSelector": "Atom labels",
+      "pickingMode": "Mouse action",
+      "openFile": "Open a structure file",
+      "consoleInput": "Jmol script command",
+      "currentAtom": "Current atom: {{description}}",
+      "measurementAdded": "Measured {{value}}",
+      "details": "{{title}}: {{atoms}} atoms, {{style}} style, colored by {{scheme}}.",
+      "detailsNone": "No structure is loaded."
     },
-    "currentDetails": "The simulation is in its initial state.",
-    "controls": {
-      "exampleControl": "Example control"
+    "molecules": {
+      "screenSummary": {
+        "playArea": "A 3D viewer shows a small molecule as balls, sticks or space-filling spheres. Atoms are colored by element: carbon gray, oxygen red, nitrogen blue, hydrogen white.",
+        "controlArea": "Choose a molecule, a rendering style, colors and labels; measure distances and angles; run Jmol script commands.",
+        "interactionHint": "Focus the viewer and use the arrow keys to turn the molecule."
+      }
+    },
+    "biomolecules": {
+      "screenSummary": {
+        "playArea": "A 3D viewer shows a protein or nucleic acid as a cartoon of helices and strands, with ligands as ball-and-stick.",
+        "controlArea": "Choose a structure, style and coloring (chain, secondary structure, residue type, B-factor); show hydrogen bonds; select atoms with Jmol expressions.",
+        "interactionHint": "Try the script command: select ligand; spacefill on"
+      }
+    },
+    "crystals": {
+      "screenSummary": {
+        "playArea": "A 3D viewer shows a crystal packed into one or more unit cells, with the cell edges drawn as a box.",
+        "controlArea": "Choose a crystal, the number of cells, and whether to show coordination polyhedra and the unit cell.",
+        "interactionHint": "Turn on polyhedra for perovskite to see the TiO₆ octahedra."
+      }
     }
   },
   "preferences": {
     "title": "Simulation",
-    "exampleToggle": "Example Toggle"
+    "perspective": "Perspective projection"
   }
 }
