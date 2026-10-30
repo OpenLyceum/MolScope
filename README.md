@@ -21,7 +21,7 @@ Progressive Web App.
 - **Colour schemes:** element (CPK), chain, secondary structure, B-factor, residue type,
   N→C rainbow and formal charge; multiple bonds from MOL files are drawn.
 - **Mouse modes:** rotate, identify, distance, angle, torsion, select and centre; hover tooltips;
-  measurement list.
+  measurement list; select all / none and apply the current style to the selection.
 - **Script console** with a Jmol-compatible subset: `select`, `restrict`, `display`/`hide`,
   `spacefill`, `wireframe`, `cartoon`, `color`, `label`, `measure`, `spin`, `rotate`, `zoom`,
   `center`, `hbonds`, `unitcell`, `polyhedra`, `frame`, `animation`, `vibration`, `set`, and the

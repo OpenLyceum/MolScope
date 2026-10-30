@@ -8,7 +8,7 @@
  */
 
 import { DerivedProperty, Multilink, NumberProperty, PatternStringProperty, Property } from "scenerystack/axon";
-import { HBox, HSeparator, Node, Text, VBox } from "scenerystack/scenery";
+import { HBox, HSeparator, Node, RichText, Text, VBox } from "scenerystack/scenery";
 import { ArrowButton } from "scenerystack/sun";
 import { StringManager } from "../../i18n/StringManager.js";
 import MolScopeColors from "../../MolScopeColors.js";
@@ -17,6 +17,7 @@ import { MolScopePanel } from "../MolScopePanel.js";
 import type { ColorSchemeValue } from "../model/ColorSchemes.js";
 import type { DisplayStyleValue } from "../model/DisplayState.js";
 import { LabelMode, type LabelModeValue } from "../model/DisplayState.js";
+import { HBOND_MAX_DISTANCE, HBOND_MIN_DISTANCE } from "../model/HydrogenBonds.js";
 import type { LibraryGroupValue } from "../model/library/StructureLibrary.js";
 import { libraryEntry, libraryGroups } from "../model/library/StructureLibrary.js";
 import { CUSTOM_ENTRY_ID, type ViewerModel } from "../model/ViewerModel.js";
@@ -31,6 +32,7 @@ import {
   pairRow,
   pushButton,
   radioGroup,
+  SMALL_FONT,
 } from "./ControlFactory.js";
 import { disposeSubtree } from "./disposeSubtree.js";
 
@@ -49,6 +51,7 @@ export class ViewerControlPanel extends MolScopePanel {
   public constructor(model: ViewerModel, listParent: Node, options: ViewerControlPanelOptions) {
     const strings = StringManager.getInstance();
     const controls = strings.getControls();
+    const info = strings.getInfo();
     const a11y = strings.getCommonA11yStrings();
     const names = strings.getLibraryNames() as unknown as Record<string, Property<string>>;
     const groupNames = strings.getGroups() as unknown as Record<string, Property<string>>;
@@ -90,7 +93,7 @@ export class ViewerControlPanel extends MolScopePanel {
         g.local.value = g.ids.has(id) ? id : CUSTOM_ENTRY_ID;
       }
       const entry = libraryEntry(id);
-      if (entry) {
+      if (entry && groups.includes(entry.group)) {
         groupProperty.value = entry.group;
       }
     };
@@ -188,8 +191,16 @@ export class ViewerControlPanel extends MolScopePanel {
       a11y.labelSelectorStringProperty,
       inner,
     );
+    // The menus only act when their value changes; this re-applies them to a new selection.
+    const applyButton = pushButton(controls.applyToSelectionStringProperty, () =>
+      model.applyToSelection(styleProperty.value, schemeProperty.value, model.labelModeProperty.value),
+    );
 
     // ── Display toggles ─────────────────────────────────────────────────────────
+    const hydrogenBondNoteProperty = new PatternStringProperty(info.hydrogenBondsEstimateStringProperty, {
+      min: HBOND_MIN_DISTANCE,
+      max: HBOND_MAX_DISTANCE,
+    });
     const toggles: Node[] = [
       pairRow(
         checkbox(model.showHydrogensProperty, controls.hydrogensStringProperty, column - 24),
@@ -224,7 +235,15 @@ export class ViewerControlPanel extends MolScopePanel {
         }),
       );
     } else {
-      toggles.push(checkbox(model.hydrogenBondsProperty, controls.hydrogenBondsStringProperty, inner - 24));
+      toggles.push(
+        checkbox(model.hydrogenBondsProperty, controls.hydrogenBondsStringProperty, inner - 24),
+        new RichText(hydrogenBondNoteProperty, {
+          font: SMALL_FONT,
+          fill: MolScopeColors.mutedTextColorProperty,
+          lineWrap: inner,
+          visibleProperty: model.hydrogenBondsProperty,
+        }),
+      );
     }
 
     // ── Frames and vibration (only when the structure has them) ────────────────
@@ -294,6 +313,7 @@ export class ViewerControlPanel extends MolScopePanel {
         labeled(controls.styleStringProperty, styleCombo, inner),
         labeled(controls.colorStringProperty, schemeCombo, inner),
         labeled(controls.labelsStringProperty, labelCombo, inner),
+        applyButton,
         separator(),
         ...toggles,
         animationBox,
@@ -309,6 +329,7 @@ export class ViewerControlPanel extends MolScopePanel {
       frameMultilink.dispose();
       visibilityLink.dispose();
       frameText.dispose();
+      hydrogenBondNoteProperty.dispose();
       hasFramesProperty.dispose();
       hasVibrationsProperty.dispose();
       disposeSubtree(content);

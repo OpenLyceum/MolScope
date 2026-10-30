@@ -138,8 +138,9 @@ export class ViewerModel implements TModel, ScriptTarget {
   private readonly fetcher: (url: string) => Promise<string>;
   private loadToken = 0;
   private animationAccumulator = 0;
-  private hydrogenBondCache: Bond[] | null = null;
-  private polyhedraCache: Polyhedron[] | null = null;
+  /** Geometry derived from one frame's positions; recomputed when the frame changes. */
+  private hydrogenBondCache: { readonly frame: Frame; readonly bonds: Bond[] } | null = null;
+  private polyhedraCache: { readonly frame: Frame; readonly polyhedra: Polyhedron[] } | null = null;
   private vibratedPositions: Float64Array | null = null;
   /** Set while a load writes the cell range, so the range listener does not reload again. */
   private settingRange = false;
@@ -226,8 +227,10 @@ export class ViewerModel implements TModel, ScriptTarget {
     if (!(structure && frame)) {
       return [];
     }
-    this.hydrogenBondCache ??= findHydrogenBonds(structure, frame.positions);
-    return this.hydrogenBondCache;
+    if (this.hydrogenBondCache?.frame !== frame) {
+      this.hydrogenBondCache = { frame, bonds: findHydrogenBonds(structure, frame.positions) };
+    }
+    return this.hydrogenBondCache.bonds;
   }
 
   public polyhedra(): readonly Polyhedron[] {
@@ -236,8 +239,10 @@ export class ViewerModel implements TModel, ScriptTarget {
     if (!(structure && frame)) {
       return [];
     }
-    this.polyhedraCache ??= findPolyhedra(structure, frame.positions);
-    return this.polyhedraCache;
+    if (this.polyhedraCache?.frame !== frame) {
+      this.polyhedraCache = { frame, polyhedra: findPolyhedra(structure, frame.positions) };
+    }
+    return this.polyhedraCache.polyhedra;
   }
 
   /** Value of a measurement in Å or degrees, from the positions being displayed. */
@@ -293,7 +298,10 @@ export class ViewerModel implements TModel, ScriptTarget {
       if (token !== this.loadToken) {
         return { title: structure.title, atomCount: structure.atoms.length };
       }
-      this.entryIdProperty.value = request.source === "library" ? request.id : CUSTOM_ENTRY_ID;
+      // A script can load another screen's entry (`load 1crn` on Molecules); this screen's menus
+      // cannot show it, so it counts as a custom structure here.
+      const ownEntry = request.source === "library" && this.entries.some((e) => e.id === request.id);
+      this.entryIdProperty.value = ownEntry ? request.id : CUSTOM_ENTRY_ID;
       if (structure.unitCell && structure.format === "CIF") {
         this.settingRange = true;
         this.cellRangeProperty.value = range[0];
@@ -360,15 +368,7 @@ export class ViewerModel implements TModel, ScriptTarget {
   }
 
   private applyHydrogenVisibility(show: boolean): void {
-    const state = this.state;
-    if (!state) {
-      return;
-    }
-    state.structure.atoms.forEach((atom, i) => {
-      if (atom.element.number === 1) {
-        state.hidden[i] = show ? 0 : 1;
-      }
-    });
+    this.state?.setHydrogensHidden(!show);
   }
 
   // ── ScriptTarget ─────────────────────────────────────────────────────────────
@@ -458,7 +458,12 @@ export class ViewerModel implements TModel, ScriptTarget {
   }
 
   public addMeasurement(atoms: readonly number[]): number | null {
-    if (atoms.length < 2 || atoms.length > 4 || new Set(atoms).size !== atoms.length) {
+    if (
+      atoms.length < 2 ||
+      atoms.length > 4 ||
+      new Set(atoms).size !== atoms.length ||
+      !atoms.every((i) => this.isAtomIndex(i))
+    ) {
       return null;
     }
     const measurement = { atoms: [...atoms] };
@@ -508,8 +513,35 @@ export class ViewerModel implements TModel, ScriptTarget {
 
   public setStyle(style: DisplayStyleValue): void {
     this.state?.applyStyle(style);
-    this.applyHydrogenVisibility(this.showHydrogensProperty.value);
     this.styleProperty.value = style;
+    this.displayChanged();
+  }
+
+  /** Re-applies the menus' style, colouring and labels to the selection, even when they did not change. */
+  public applyToSelection(style: DisplayStyleValue, scheme: ColorSchemeValue, labelMode: LabelModeValue): void {
+    const state = this.state;
+    if (!state) {
+      return;
+    }
+    state.applyStyle(style);
+    state.setColorScheme(scheme);
+    state.setLabel(LABEL_FORMATS[labelMode]);
+    this.styleProperty.value = style;
+    this.colorSchemeProperty.value = scheme;
+    this.displayChanged();
+  }
+
+  /** Selects every atom, as on load, and drops the selection halos. */
+  public selectAll(): void {
+    this.state?.selected.fill(1);
+    this.selectionHalosProperty.value = false;
+    this.displayChanged();
+  }
+
+  /** Empties the selection so Select-mode clicks build one up; halos show what is picked. */
+  public selectNone(): void {
+    this.state?.selected.fill(0);
+    this.selectionHalosProperty.value = true;
     this.displayChanged();
   }
 
@@ -547,7 +579,7 @@ export class ViewerModel implements TModel, ScriptTarget {
   /** Handles a click on an atom according to the picking mode. */
   public pickAtom(index: number): void {
     const state = this.state;
-    if (!state) {
+    if (!(state && this.isAtomIndex(index))) {
       return;
     }
     switch (this.pickingModeProperty.value) {
@@ -585,6 +617,10 @@ export class ViewerModel implements TModel, ScriptTarget {
         this.pickedAtomProperty.value = index;
         break;
     }
+  }
+
+  private isAtomIndex(index: number): boolean {
+    return Number.isInteger(index) && index >= 0 && index < (this.state?.atomCount ?? 0);
   }
 
   // ── Time ─────────────────────────────────────────────────────────────────────

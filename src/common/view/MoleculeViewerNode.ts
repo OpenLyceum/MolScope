@@ -152,6 +152,7 @@ export class MoleculeViewerNode extends Node {
   private readonly tooltipText: RichText;
   private readonly repaintMultilink: { dispose(): void };
   private readonly tooltipLink: () => void;
+  private readonly structureLink: () => void;
   private readonly colorListener: () => void;
   private readonly currentAtomDescriptionProperty: TReadOnlyProperty<string> & { dispose(): void };
   private readonly currentAtomStringProperty: PatternStringProperty<{ description: TReadOnlyProperty<string> }>;
@@ -218,6 +219,12 @@ export class MoleculeViewerNode extends Node {
     // Overlay colours change with the colour profile.
     this.colorListener = invalidate;
     MolScopeColors.labelColorProperty.lazyLink(this.colorListener);
+
+    // Indices from the previous structure mean nothing in the new one.
+    this.structureLink = () => {
+      this.atomCursor = -1;
+    };
+    model.structureProperty.lazyLink(this.structureLink);
 
     this.tooltipLink = () => this.updateTooltip();
     model.hoveredAtomProperty.lazyLink(this.tooltipLink);
@@ -459,6 +466,7 @@ export class MoleculeViewerNode extends Node {
   public override dispose(): void {
     this.repaintMultilink.dispose();
     MolScopeColors.labelColorProperty.unlink(this.colorListener);
+    this.model.structureProperty.unlink(this.structureLink);
     this.model.hoveredAtomProperty.unlink(this.tooltipLink);
     this.model.rotationProperty.unlink(this.tooltipLink);
     this.currentAtomStringProperty.dispose();

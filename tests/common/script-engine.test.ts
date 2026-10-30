@@ -1,11 +1,14 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { Node } from "scenerystack/scenery";
 import { beforeEach, describe, expect, it } from "vitest";
 import { ColorScheme } from "../../src/common/model/ColorSchemes.js";
-import { DisplayStyle, WIREFRAME_LINE } from "../../src/common/model/DisplayState.js";
+import { DisplayStyle, SMALL_MOLECULE_STYLES, WIREFRAME_LINE } from "../../src/common/model/DisplayState.js";
 import { LibraryCategory } from "../../src/common/model/library/StructureLibrary.js";
+import { parseStructure } from "../../src/common/model/parsers/parseStructure.js";
 import { ScriptMessageKey, splitCommands } from "../../src/common/model/ScriptEngine.js";
 import { CUSTOM_ENTRY_ID, ViewerModel } from "../../src/common/model/ViewerModel.js";
+import { ViewerControlPanel } from "../../src/common/view/ViewerControlPanel.js";
 
 const DATA = join(process.cwd(), "src/common/model/library/data");
 
@@ -36,6 +39,57 @@ describe("ScriptEngine", () => {
       "spin on",
     ]);
     expect(splitCommands('echo "a;b"')).toEqual(['echo "a;b"']);
+    // A prime after a letter is part of a nucleic-acid atom name, not an opening quote.
+    expect(splitCommands("select .C4'; color red")).toEqual(["select .C4'", "color red"]);
+    expect(splitCommands("echo 'a;b'; spin on")).toEqual(["echo 'a;b'", "spin on"]);
+  });
+
+  it("keeps hidden hydrogens hidden through style changes and the hydrogens toggle", async () => {
+    await model.runScript("hide hydrogen; style wireframe");
+    const state = model.displayState!;
+    const h = state.structure.atoms.findIndex((a) => a.element.number === 1);
+    expect(state.hidden[h]).toBe(1);
+    model.showHydrogensProperty.value = false;
+    model.showHydrogensProperty.value = true;
+    expect(state.hidden[h]).toBe(1);
+    await model.runScript("display hydrogen");
+    expect(state.hidden[h]).toBe(0);
+    model.showHydrogensProperty.value = false;
+    expect(state.hidden[h]).toBe(1);
+  });
+
+  it("selects all or none and re-applies the menus to the selection", async () => {
+    const state = model.displayState!;
+    model.selectNone();
+    expect(state.selectedCount()).toBe(0);
+    expect(model.selectionHalosProperty.value).toBe(true);
+    await model.runScript("select nitrogen; spacefill off");
+    const n = state.structure.atoms.findIndex((a) => a.element.symbol === "N");
+    const c = state.structure.atoms.findIndex((a) => a.element.symbol === "C");
+    const carbonRadius = state.atomRadius[c];
+    // The style menu still reads Ball & stick, so choosing it again would do nothing; Apply does.
+    model.applyToSelection(DisplayStyle.BALL_AND_STICK, ColorScheme.ELEMENT, "none");
+    expect(state.atomRadius[n]).toBeGreaterThan(0);
+    expect(state.atomRadius[c]).toBe(carbonRadius);
+    model.selectAll();
+    expect(state.selectedCount()).toBe(state.atomCount);
+    expect(model.selectionHalosProperty.value).toBe(false);
+  });
+
+  it("loads another screen's entry as a custom structure", async () => {
+    const panel = new ViewerControlPanel(model, new Node(), {
+      styles: SMALL_MOLECULE_STYLES,
+      colorSchemes: [ColorScheme.ELEMENT],
+      showBiomoleculeOptions: false,
+      showCrystalOptions: false,
+      openFile: () => undefined,
+      width: 220,
+    });
+    const messages = await model.runScript("load 1crn");
+    expect(messages[0]?.key).toBe(ScriptMessageKey.LOADED);
+    expect(model.entryIdProperty.value).toBe(CUSTOM_ENTRY_ID);
+    expect(model.structure?.isBiomolecule).toBe(true);
+    panel.dispose();
   });
 
   it("selects and styles only the selection, like Jmol", async () => {
@@ -111,6 +165,25 @@ describe("ViewerModel picking", () => {
     expect(m).toBeDefined();
     expect(model.measurementValue(m!)).toBeGreaterThan(100);
     expect(model.measurementValue(m!)).toBeLessThan(110);
+  });
+
+  it("ignores picks and measurements outside the structure", async () => {
+    const model = makeModel();
+    await model.loadEntry("water");
+    model.pickingModeProperty.value = "distance";
+    model.pickAtom(0);
+    model.pickAtom(23); // a stale index from caffeine
+    expect(model.pendingPicksProperty.value).toEqual([0]);
+    expect(model.addMeasurement([0, 23])).toBeNull();
+    expect(model.measurementsProperty.value).toHaveLength(0);
+  });
+
+  it("recomputes hydrogen bonds for each trajectory frame", () => {
+    const model = makeModel();
+    model.setStructure(parseStructure("2\nnear\nO 0 0 0\nO 3 0 0\n2\nfar\nO 0 0 0\nO 8 0 0\n", "pair.xyz"));
+    expect(model.hydrogenBonds()).toHaveLength(1);
+    model.setFrame(1);
+    expect(model.hydrogenBonds()).toHaveLength(0);
   });
 
   it("animates vibrations and frames", async () => {

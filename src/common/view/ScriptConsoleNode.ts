@@ -23,7 +23,7 @@ const VISIBLE_LINES = 4;
 const HISTORY_SIZE = 50;
 
 export class ScriptConsoleNode extends MolScopePanel {
-  private readonly input: HTMLInputElement;
+  private readonly setValue: (value: string) => void;
   private readonly disposeScriptConsoleNode: () => void;
 
   public constructor(model: ViewerModel, bounds: Bounds2) {
@@ -31,11 +31,25 @@ export class ScriptConsoleNode extends MolScopePanel {
     const controls = strings.getControls();
     const inner = bounds.width - 24;
 
+    // The visible field. Scenery marks its rendered layers aria-hidden, so this element is for
+    // pointer users only and stays out of the tab order. Keyboard and screen-reader users get the
+    // parallel-DOM <input> on the same node; the two mirror each other's value.
     const input = document.createElement("input");
     input.type = "text";
     input.spellcheck = false;
     input.autocomplete = "off";
-    input.setAttribute("aria-label", strings.getCommonA11yStrings().consoleInputStringProperty.value);
+    input.tabIndex = -1;
+    const inputNode = new DOM(input, {
+      allowInput: true,
+      tagName: "input",
+      inputType: "text",
+      accessibleName: strings.getCommonA11yStrings().consoleInputStringProperty,
+    });
+    // Scenery only writes inputValue to its element when it changes, so keep it current on every keystroke.
+    const setValue = (value: string) => {
+      input.value = value;
+      inputNode.inputValue = value;
+    };
     const history: string[] = [];
     let historyIndex = 0;
 
@@ -49,29 +63,45 @@ export class ScriptConsoleNode extends MolScopePanel {
         history.shift();
       }
       historyIndex = history.length;
-      input.value = "";
+      setValue("");
       model.runScript(script).catch(() => undefined);
     };
-    input.addEventListener("keydown", (event) => {
-      // Keep keystrokes in the field away from the sim's global hotkeys.
-      event.stopPropagation();
+    const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Enter") {
         run();
       } else if (event.key === "ArrowUp" && historyIndex > 0) {
         historyIndex--;
-        input.value = history[historyIndex] ?? "";
+        setValue(history[historyIndex] ?? "");
         event.preventDefault();
       } else if (event.key === "ArrowDown") {
         historyIndex = Math.min(history.length, historyIndex + 1);
-        input.value = history[historyIndex] ?? "";
+        setValue(history[historyIndex] ?? "");
         event.preventDefault();
       }
+    };
+    input.addEventListener("input", () => setValue(input.value));
+    input.addEventListener("keydown", (event) => {
+      // Keep keystrokes in the field away from the sim's global hotkeys.
+      event.stopPropagation();
+      handleKey(event);
     });
     input.addEventListener("keyup", (event) => event.stopPropagation());
+    inputNode.addInputListener({
+      input: (event) => {
+        const target = event.domEvent?.target;
+        if (target instanceof HTMLInputElement) {
+          setValue(target.value);
+        }
+      },
+      keydown: (event) => {
+        if (event.domEvent) {
+          handleKey(event.domEvent);
+        }
+      },
+    });
 
     const runButton = pushButton(controls.runStringProperty, run);
     const inputWidth = inner - runButton.width - 70;
-    const inputNode = new DOM(input, { allowInput: true });
 
     const output = new RichText("", { font: SMALL_FONT, lineWrap: inner, leading: 2, maxHeight: 64 });
 
@@ -137,7 +167,7 @@ export class ScriptConsoleNode extends MolScopePanel {
       left: bounds.minX,
       top: bounds.minY,
     });
-    this.input = input;
+    this.setValue = setValue;
 
     this.disposeScriptConsoleNode = () => {
       styleMultilink.dispose();
@@ -148,7 +178,7 @@ export class ScriptConsoleNode extends MolScopePanel {
 
   /** Clears the typed text (Reset All). */
   public reset(): void {
-    this.input.value = "";
+    this.setValue("");
   }
 
   public override dispose(): void {

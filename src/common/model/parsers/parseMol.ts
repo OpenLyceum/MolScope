@@ -2,9 +2,9 @@
  * parseMol.ts
  *
  * MDL Molfile / SDF (V2000). Reads the header title, the atom block (coordinates,
- * symbol, charge code) and the bond block with bond orders, which is why
- * benzene and caffeine show their double bonds. Multiple SDF records with the same
- * atom count load as frames.
+ * symbol, charge code), `M  CHG` charges and the bond block with bond orders, which
+ * is why benzene and caffeine show their double bonds. Multiple SDF records with the
+ * same atom count load as frames.
  */
 
 import { elementForSymbol } from "../Elements.js";
@@ -37,16 +37,20 @@ export function parseMol(text: string, fallbackTitle: string): Structure {
       throw new StructureParseError("molCounts");
     }
     const positions = new Float64Array(3 * atomCount);
-    const recordAtoms: Atom[] = [];
+    const symbols: string[] = [];
+    const charges = new Array<number>(atomCount).fill(0);
     for (let i = 0; i < atomCount; i++) {
       const row = lines[countsIndex + 1 + i] ?? "";
       positions[3 * i] = Number(row.slice(0, 10));
       positions[3 * i + 1] = Number(row.slice(10, 20));
       positions[3 * i + 2] = Number(row.slice(20, 30));
-      const symbol = row.slice(31, 34).trim();
-      const charge = CHARGE_CODES[row.slice(36, 39).trim()] ?? 0;
-      recordAtoms.push(makeAtom({ element: elementForSymbol(symbol), serial: i + 1, formalCharge: charge }));
+      symbols.push(row.slice(31, 34).trim());
+      charges[i] = CHARGE_CODES[row.slice(36, 39).trim()] ?? 0;
     }
+    applyPropertyCharges(lines.slice(countsIndex + 1 + atomCount + bondCount), charges);
+    const recordAtoms = symbols.map((symbol, i) =>
+      makeAtom({ element: elementForSymbol(symbol), serial: i + 1, formalCharge: charges[i] ?? 0 }),
+    );
     const recordBonds: Bond[] = [];
     for (let i = 0; i < bondCount; i++) {
       const row = lines[countsIndex + 1 + atomCount + i] ?? "";
@@ -72,4 +76,32 @@ export function parseMol(text: string, fallbackTitle: string): Structure {
   // PubChem SDF titles are bare CIDs; prefer the caller's name then.
   const usefulTitle = /^\d*$/.test(title) ? fallbackTitle : title;
   return buildStructure({ title: usefulTitle, format: "MOL", atoms, frames, bonds, perceive: bonds.length === 0 });
+}
+
+/**
+ * The properties block. Per the CTfile spec, any `M  CHG` or `M  RAD` line supersedes every
+ * atom-block charge, so those reset to zero before the `M  CHG` entries (`M  CHGnn8 aaa vvv …`) apply.
+ */
+function applyPropertyCharges(lines: readonly string[], charges: number[]): void {
+  const properties: string[] = [];
+  for (const line of lines) {
+    if (line.startsWith("M  END")) {
+      break;
+    }
+    properties.push(line);
+  }
+  if (!properties.some((l) => l.startsWith("M  CHG") || l.startsWith("M  RAD"))) {
+    return;
+  }
+  charges.fill(0);
+  for (const line of properties.filter((l) => l.startsWith("M  CHG"))) {
+    const [count = 0, ...pairs] = line.slice(6).trim().split(/\s+/).map(Number);
+    for (let k = 0; k < count; k++) {
+      const atom = (pairs[2 * k] ?? 0) - 1;
+      const value = pairs[2 * k + 1];
+      if (atom >= 0 && atom < charges.length && Number.isInteger(value)) {
+        charges[atom] = value ?? 0;
+      }
+    }
+  }
 }

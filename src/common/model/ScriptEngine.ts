@@ -155,7 +155,10 @@ const COMMANDS = [
   "help",
 ];
 
-/** Splits a script into commands on `;` and new lines, dropping `#` comments, keeping quoted text intact. */
+/**
+ * Splits a script into commands on `;` and new lines, dropping `#` comments, keeping quoted text intact.
+ * A quote only opens a string at the start of a word, so nucleic-acid primes (`.C4'`) stay atom names.
+ */
 export function splitCommands(script: string): string[] {
   const out: string[] = [];
   for (const line of script.split(/\r?\n/)) {
@@ -167,7 +170,7 @@ export function splitCommands(script: string): string[] {
         if (ch === quote) {
           quote = null;
         }
-      } else if (ch === '"' || ch === "'") {
+      } else if ((ch === '"' || ch === "'") && !/[\w'*]$/.test(current)) {
         quote = ch;
         current += ch;
       } else if (ch === "#") {

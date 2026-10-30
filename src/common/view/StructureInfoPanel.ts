@@ -2,20 +2,21 @@
  * StructureInfoPanel.ts
  *
  * The left-hand panel: what is loaded (title, formula, molar mass, counts, cell
- * parameters), the mouse mode with a one-line hint, the identified atom, and the
- * measurement list. Everything is rebuilt from model Properties, so script
+ * parameters, where secondary structure came from), the mouse mode with a one-line
+ * hint, select-all / select-none, the identified atom, and the measurement list. Everything is rebuilt from model Properties, so script
  * commands and clicks update it the same way.
  */
 
 import { Multilink, type Property } from "scenerystack/axon";
 import { toFixed } from "scenerystack/dot";
 import { StringUtils } from "scenerystack/phetcommon";
-import { HSeparator, RichText, Text, VBox } from "scenerystack/scenery";
+import { HBox, HSeparator, RichText, Text, VBox } from "scenerystack/scenery";
 import { StringManager } from "../../i18n/StringManager.js";
 import MolScopeColors from "../../MolScopeColors.js";
 import { MolScopePanel } from "../MolScopePanel.js";
 import { hillFormula, molarMass } from "../model/Composition.js";
 import { PickingMode, type PickingModeValue } from "../model/ScriptEngine.js";
+import { SecondaryStructureSource } from "../model/Structure.js";
 import { LoadState, type ViewerModel } from "../model/ViewerModel.js";
 import { CONTROL_FONT, heading, pushButton, radioGroup, SMALL_FONT } from "./ControlFactory.js";
 import { disposeSubtree } from "./disposeSubtree.js";
@@ -70,6 +71,15 @@ export class StructureInfoPanel extends MolScopePanel {
       leading: 2,
     });
     const clearButton = pushButton(controls.clearMeasurementsStringProperty, () => model.clearMeasurements());
+    // Every menu edits only the selection, so offer a way back to "all" (and an empty start for Select mode).
+    const selectionButtons = new HBox({
+      spacing: 6,
+      justify: "left",
+      children: [
+        pushButton(controls.selectAllStringProperty, () => model.selectAll()),
+        pushButton(controls.selectNoneStringProperty, () => model.selectNone()),
+      ],
+    });
 
     const updateSummary = () => {
       const structure = model.structure;
@@ -110,6 +120,13 @@ export class StructureInfoPanel extends MolScopePanel {
           }),
         );
       }
+      if (structure.secondaryStructureSource !== SecondaryStructureSource.NONE) {
+        const source =
+          structure.secondaryStructureSource === SecondaryStructureSource.FILE
+            ? info.secondaryStructureFromFileStringProperty.value
+            : info.secondaryStructureEstimatedStringProperty.value;
+        lines.push(escapeHtml(source));
+      }
       const cell = structure.unitCell;
       if (cell && structure.format === "CIF") {
         const p = cell.parameters;
@@ -135,10 +152,12 @@ export class StructureInfoPanel extends MolScopePanel {
         lines.push(`<i>${escapeHtml(comment.replace(/\^-1/g, "⁻¹"))}</i>`);
       }
       const selected = state.selectedCount();
-      if (selected !== state.atomCount) {
+      const partial = selected !== state.atomCount;
+      if (partial) {
         lines.push(StringUtils.fillIn(info.selectedStringProperty.value, { count: selected }));
       }
       detailsText.string = lines.join("<br>");
+      selectionButtons.visible = partial || model.pickingModeProperty.value === PickingMode.SELECT;
     };
 
     const updatePicking = () => {
@@ -184,6 +203,7 @@ export class StructureInfoPanel extends MolScopePanel {
         model.loadStateProperty,
         model.loadErrorProperty,
         model.frameIndexProperty,
+        model.pickingModeProperty,
         info.atomsBondsStringProperty,
       ],
       updateSummary,
@@ -212,6 +232,7 @@ export class StructureInfoPanel extends MolScopePanel {
         heading(controls.mouseStringProperty, inner),
         modeGroup,
         hintText,
+        selectionButtons,
         pickText,
         measurementBox,
       ],

@@ -22,6 +22,14 @@ export const SecondaryStructure = {
 } as const;
 export type SecondaryStructureValue = (typeof SecondaryStructure)[keyof typeof SecondaryStructure];
 
+/** File: HELIX/SHEET records. Geometry: estimated from Cα spacing. None: no protein residues. */
+export const SecondaryStructureSource = {
+  FILE: "file",
+  GEOMETRY: "geometry",
+  NONE: "none",
+} as const;
+export type SecondaryStructureSourceValue = (typeof SecondaryStructureSource)[keyof typeof SecondaryStructureSource];
+
 export type Atom = {
   readonly element: ElementData;
   /** Atom name as in the file ("CA", "O1", "C12"); the element symbol plus an index if the file has none. */
@@ -99,6 +107,8 @@ export type Structure = {
   readonly unitCell: UnitCell | null;
   /** True for structures with polymer residues (cartoon/trace make sense). */
   readonly isBiomolecule: boolean;
+  /** Where protein secondary structure came from, so the view can say when it is only estimated. */
+  readonly secondaryStructureSource: SecondaryStructureSourceValue;
 };
 
 /** Reads atom i's position from a frame without allocating. */

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { formulaString, hillFormula } from "../../src/common/model/Composition.js";
 import { parseCif } from "../../src/common/model/parsers/parseCif.js";
 import { parseStructure } from "../../src/common/model/parsers/parseStructure.js";
-import { SecondaryStructure } from "../../src/common/model/Structure.js";
+import { SecondaryStructure, SecondaryStructureSource } from "../../src/common/model/Structure.js";
 
 const DATA = join(process.cwd(), "src/common/model/library/data");
 const read = (file: string) => readFileSync(join(DATA, file), "utf8");
@@ -17,6 +17,23 @@ describe("MOL parser", () => {
     expect(s.bonds).toHaveLength(25);
     expect(s.bonds.filter((b) => b.order === 2).length).toBeGreaterThan(0);
     expect(s.title).toBe("Caffeine"); // PubChem's numeric title is replaced
+  });
+
+  it("lets M  CHG supersede the atom-block charge codes", () => {
+    const mol = (properties: string[]) =>
+      [
+        "ions",
+        "",
+        "",
+        "  2  0  0  0  0  0  0  0  0  0999 V2000",
+        "    0.0000    0.0000    0.0000 Na  0  3  0  0  0  0  0  0  0  0  0  0",
+        "    3.0000    0.0000    0.0000 Cl  0  0  0  0  0  0  0  0  0  0  0  0",
+        ...properties,
+        "M  END",
+      ].join("\n");
+    expect(parseStructure(mol([]), "a.mol").atoms.map((a) => a.formalCharge)).toEqual([1, 0]);
+    // Any M  CHG line resets every atom-block charge, including Na's +1 code.
+    expect(parseStructure(mol(["M  CHG  1   2  -1"]), "b.mol").atoms.map((a) => a.formalCharge)).toEqual([0, -1]);
   });
 });
 
@@ -48,6 +65,7 @@ describe("PDB parser", () => {
     expect(s.residues.filter((r) => r.leadAtom >= 0)).toHaveLength(46);
     expect(s.atoms.some((a) => a.secondaryStructure === SecondaryStructure.HELIX)).toBe(true);
     expect(s.atoms.some((a) => a.secondaryStructure === SecondaryStructure.SHEET)).toBe(true);
+    expect(s.secondaryStructureSource).toBe(SecondaryStructureSource.FILE);
     expect(s.unitCell).not.toBeNull();
     // Crambin has three disulfide bridges, found by distance bonding.
     const sg = s.atoms.map((a, i) => (a.name === "SG" ? i : -1)).filter((i) => i >= 0);
@@ -59,6 +77,18 @@ describe("PDB parser", () => {
     const s = parseStructure(read("4hhb.pdb"), "4hhb.pdb");
     expect(new Set(s.atoms.map((a) => a.chain))).toEqual(new Set(["A", "B", "C", "D"]));
     expect(s.residues.filter((r) => r.name === "HEM")).toHaveLength(4);
+  });
+
+  it("falls back to Cα geometry without HELIX/SHEET records, and says so", () => {
+    const text = read("1crn.pdb")
+      .split("\n")
+      .filter((l) => !/^(HELIX|SHEET)/.test(l))
+      .join("\n");
+    const s = parseStructure(text, "1crn.pdb");
+    expect(s.secondaryStructureSource).toBe(SecondaryStructureSource.GEOMETRY);
+    expect(s.atoms.some((a) => a.secondaryStructure === SecondaryStructure.HELIX)).toBe(true);
+    // DNA has no protein residues, so there is no secondary structure to report.
+    expect(parseStructure(read("1bna.pdb"), "1bna.pdb").secondaryStructureSource).toBe(SecondaryStructureSource.NONE);
   });
 });
 

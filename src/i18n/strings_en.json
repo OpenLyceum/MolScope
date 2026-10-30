@@ -33,7 +33,10 @@
     "console": "Script",
     "run": "Run",
     "consolePlaceholder": "Jmol command, e.g. select carbon; color orange; spin on",
-    "custom": "(opened file)"
+    "custom": "(opened file)",
+    "selectAll": "Select all",
+    "selectNone": "Select none",
+    "applyToSelection": "Apply to selection"
   },
   "groups": {
     "basics": "Small molecules",
@@ -102,7 +105,10 @@
     "picks": "{{count}} of {{needed}} atoms picked",
     "loading": "Loading…",
     "loadError": "Could not load: {{reason}}",
-    "noStructure": "No structure loaded"
+    "noStructure": "No structure loaded",
+    "hydrogenBondsEstimate": "Estimated from N/O distances of {{min}}–{{max}} Å; hydrogens and angles are not checked",
+    "secondaryStructureFromFile": "Secondary structure from the file's HELIX/SHEET records",
+    "secondaryStructureEstimated": "Secondary structure estimated from Cα spacing (approximate)"
   },
   "units": {
     "angstroms": "{{value}} Å",

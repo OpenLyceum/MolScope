@@ -8,8 +8,17 @@
  */
 
 import { perceiveBonds } from "./BondPerception.js";
-import type { Atom, Bond, Frame, Residue, ResidueKindValue, SecondaryStructureValue, Structure } from "./Structure.js";
-import { ResidueKind, SecondaryStructure } from "./Structure.js";
+import type {
+  Atom,
+  Bond,
+  Frame,
+  Residue,
+  ResidueKindValue,
+  SecondaryStructureSourceValue,
+  SecondaryStructureValue,
+  Structure,
+} from "./Structure.js";
+import { ResidueKind, SecondaryStructure, SecondaryStructureSource } from "./Structure.js";
 import type { UnitCell } from "./UnitCell.js";
 
 /** Standard amino-acid residue names (plus common variants). */
@@ -79,10 +88,13 @@ export function buildStructure(input: BuildInput): Structure {
   const residues = buildResidues(atoms);
   const isBiomolecule = residues.some((r) => r.kind === ResidueKind.AMINO || r.kind === ResidueKind.NUCLEIC);
 
+  let secondaryStructureSource: SecondaryStructureSourceValue = SecondaryStructureSource.NONE;
   if (input.ranges && input.ranges.length > 0) {
     applyRanges(atoms, residues, input.ranges);
-  } else if (isBiomolecule) {
+    secondaryStructureSource = SecondaryStructureSource.FILE;
+  } else if (residues.some((r) => r.kind === ResidueKind.AMINO)) {
     assignFromGeometry(atoms, residues, positions);
+    secondaryStructureSource = SecondaryStructureSource.GEOMETRY;
   }
 
   let bonds: Bond[] = [...(input.bonds ?? [])];
@@ -100,6 +112,7 @@ export function buildStructure(input: BuildInput): Structure {
     frames: input.frames,
     unitCell: input.unitCell ?? null,
     isBiomolecule,
+    secondaryStructureSource,
   };
 }
 

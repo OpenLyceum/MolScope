@@ -80,9 +80,12 @@ export class DisplayState {
   public readonly cartoon: Uint8Array;
   public readonly trace: Uint8Array;
   public readonly backbone: Uint8Array;
-  /** Hidden by `hide` / `restrict` / the hydrogens toggle. */
+  /** What the renderer reads: hidden by `hide` / `restrict`, or a hydrogen while the hydrogens toggle is off. */
   public readonly hidden: Uint8Array;
   public readonly selected: Uint8Array;
+  /** Hidden by `hide` / `restrict` alone, so the hydrogens toggle cannot overwrite it. */
+  private readonly explicitlyHidden: Uint8Array;
+  private hydrogensHidden = false;
 
   public constructor(structure: Structure) {
     this.structure = structure;
@@ -95,6 +98,7 @@ export class DisplayState {
     this.trace = new Uint8Array(n);
     this.backbone = new Uint8Array(n);
     this.hidden = new Uint8Array(n);
+    this.explicitlyHidden = new Uint8Array(n);
     this.selected = new Uint8Array(n).fill(1);
     const all = new Uint8Array(n).fill(1);
     applyColorScheme(structure, "cpk", all, this.colors);
@@ -171,8 +175,23 @@ export class DisplayState {
 
   public setHidden(hidden: boolean): void {
     this.forSelected((i) => {
-      this.hidden[i] = hidden ? 1 : 0;
+      this.explicitlyHidden[i] = hidden ? 1 : 0;
     });
+    this.updateHidden();
+  }
+
+  /** The hydrogens toggle: hides every hydrogen on top of `hide` / `restrict`, without touching them. */
+  public setHydrogensHidden(hidden: boolean): void {
+    this.hydrogensHidden = hidden;
+    this.updateHidden();
+  }
+
+  private updateHidden(): void {
+    const atoms = this.structure.atoms;
+    for (let i = 0; i < atoms.length; i++) {
+      const hydrogen = this.hydrogensHidden && atoms[i]?.element.number === 1;
+      this.hidden[i] = this.explicitlyHidden[i] || hydrogen ? 1 : 0;
+    }
   }
 
   /** Applies a menu preset to the selection, the way Jmol's pop-up "Style" menu does. */

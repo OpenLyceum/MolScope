@@ -33,7 +33,10 @@
     "console": "Script",
     "run": "Exécuter",
     "consolePlaceholder": "Commande Jmol, p. ex. select carbon; color orange; spin on",
-    "custom": "(fichier ouvert)"
+    "custom": "(fichier ouvert)",
+    "selectAll": "Tout sélectionner",
+    "selectNone": "Tout désélectionner",
+    "applyToSelection": "Appliquer à la sélection"
   },
   "groups": {
     "basics": "Petites molécules",
@@ -102,7 +105,10 @@
     "picks": "{{count}} atome(s) sur {{needed}}",
     "loading": "Chargement…",
     "loadError": "Chargement impossible : {{reason}}",
-    "noStructure": "Aucune structure chargée"
+    "noStructure": "Aucune structure chargée",
+    "hydrogenBondsEstimate": "Estimées d'après les distances N/O de {{min}} à {{max}} Å ; hydrogènes et angles non vérifiés",
+    "secondaryStructureFromFile": "Structure secondaire tirée des enregistrements HELIX/SHEET du fichier",
+    "secondaryStructureEstimated": "Structure secondaire estimée d'après l'espacement des Cα (approximative)"
   },
   "units": {
     "angstroms": "{{value}} Å",

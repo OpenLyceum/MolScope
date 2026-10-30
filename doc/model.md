@@ -33,7 +33,8 @@ cut-off), and when anion formers (Pauling χ ≥ 2.5) are present, cation–cati
 
 From HELIX/SHEET records when present. Otherwise (as with Jmol's `calculate structure`) from Cα
 geometry: Cα(i)–Cα(i+3) of 4.6–5.7 Å with Cα(i)–Cα(i+4) of 5.6–6.8 Å marks a helix; an extended
-Cα(i)–Cα(i+2) > 6.3 Å run marks a strand. This is a coarse fallback, not DSSP.
+Cα(i)–Cα(i+2) > 6.3 Å run marks a strand. This is a coarse fallback, not DSSP, so the info panel
+says which source a protein's secondary structure came from (`Structure.secondaryStructureSource`).
 
 ### Unit cells
 
@@ -56,7 +57,11 @@ vibrations.
 ## Display model
 
 Per atom: sphere radius, bond radius (or "thin line"), colour, label, cartoon / trace / backbone
-flags, hidden, selected. Commands act on the selection. Presets (the Style menu):
+flags, hidden, selected. `hidden` combines `hide` / `restrict` with the Hydrogens toggle, which
+are stored separately so neither overwrites the other. Commands and menus act on the selection.
+A menu only acts when its value changes, so **Apply to selection** re-applies the current style,
+colour and labels; **Select all** / **Select none** (shown in Select mode, or whenever only part
+of the structure is selected) reset the selection. Presets (the Style menu):
 
 | Style | Spheres | Bonds |
 |---|---|---|
@@ -75,7 +80,7 @@ residue colours), `group` (rainbow N→C along each chain), `formalCharge`.
 Without explicit hydrogens (most crystal structures), a donor/acceptor pair of N/O atoms
 2.5–3.5 Å apart, in different residues, not bonded and not sharing a bonded neighbour, is drawn as
 a hydrogen bond. Geometric and permissive: it shows helix i→i+4 and base-pair patterns but no
-angle criterion is applied.
+angle criterion is applied. A note under the Hydrogen bonds checkbox says so while it is on.
 
 ### Coordination polyhedra
 
