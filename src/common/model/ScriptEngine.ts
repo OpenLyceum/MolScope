@@ -48,6 +48,9 @@ export type ScriptMessage = {
   readonly args: Readonly<Record<string, string | number>>;
 };
 
+/** Superseded work is neither a successful load nor a user-facing script error. */
+export class ScriptCancelledError extends Error {}
+
 /** Where `load` should get its data from. */
 export type LoadRequest =
   | { readonly source: "library"; readonly id: string; readonly range: Vec3 }
@@ -83,7 +86,7 @@ export type ScriptTarget = {
   readonly displayState: DisplayState | null;
   selectionContext(): SelectionContext | null;
   /** Throws on failure (network, parse); the engine reports it. */
-  load(request: LoadRequest): Promise<{ title: string; atomCount: number }>;
+  load(request: LoadRequest, fromScript?: boolean): Promise<{ title: string; atomCount: number }>;
   setSpin(on: boolean, degreesPerSecond?: number): void;
   rotate(axis: Vec3, degrees: number): void;
   setZoomPercent(percent: number): void;
@@ -195,16 +198,25 @@ export class ScriptEngine {
   }
 
   /** Runs a whole script, returning every message in order. */
-  public async run(script: string): Promise<ScriptMessage[]> {
+  public async run(script: string, isCurrent: () => boolean = () => true): Promise<ScriptMessage[]> {
     const messages: ScriptMessage[] = [];
     for (const command of splitCommands(script)) {
+      if (!isCurrent()) {
+        return [];
+      }
       try {
         const result = await this.execute(command);
+        if (!isCurrent()) {
+          return [];
+        }
         messages.push(...result);
         if (result.some((m) => m.isError)) {
           break; // Jmol stops a script at the first error.
         }
       } catch (error) {
+        if (!isCurrent() || error instanceof ScriptCancelledError) {
+          return [];
+        }
         messages.push(
           error instanceof SelectionSyntaxError
             ? message(ScriptMessageKey.BAD_SELECTION, true, { token: error.token })
@@ -413,7 +425,7 @@ export class ScriptEngine {
       // Unknown names fall back to PubChem, as Jmol's `load $name` does.
       request = id ? { source: "library", id, range } : { source: "pubchem", name };
     }
-    const result = await this.target.load(request);
+    const result = await this.target.load(request, true);
     return [message(ScriptMessageKey.LOADED, false, { title: result.title, count: result.atomCount })];
   }
 

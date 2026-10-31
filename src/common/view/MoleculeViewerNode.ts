@@ -98,7 +98,6 @@ class MoleculeCanvasNode extends CanvasNode {
     const colors = Object.fromEntries(
       Object.entries(this.colorProperties).map(([key, property]) => [key, property.value.toCSS()]),
     ) as unknown as OverlayColors;
-    const range = model.cellRangeProperty.value;
     const axisLabels = StringManager.getInstance().getAxisLabels();
     ctx.save();
     ctx.translate(bounds.minX, bounds.minY);
@@ -117,7 +116,7 @@ class MoleculeCanvasNode extends CanvasNode {
       hydrogenBonds: model.hydrogenBondsProperty.value ? model.hydrogenBonds() : null,
       polyhedra: model.polyhedraProperty.value ? model.polyhedra() : null,
       unitCell: model.unitCellProperty.value ? structure.unitCell : null,
-      cellRange: structure.format === "CIF" ? [range, range, range] : [1, 1, 1],
+      cellRange: structure.cellRange,
       showAxes: model.axesProperty.value,
       showHalos: model.selectionHalosProperty.value,
       hovered: model.hoveredAtomProperty.value,
@@ -410,7 +409,7 @@ export class MoleculeViewerNode extends Node {
             break;
           case "enter":
           case "space":
-            if (this.atomCursor >= 0) {
+            if (this.atomCursor >= 0 && model.displayState?.isDisplayed(this.atomCursor)) {
               model.pickAtom(this.atomCursor);
             }
             break;
@@ -428,16 +427,18 @@ export class MoleculeViewerNode extends Node {
       return;
     }
     const n = state.atomCount;
-    let i = this.atomCursor;
+    let i = this.atomCursor < 0 ? (direction === 1 ? -1 : 0) : this.atomCursor;
     for (let k = 0; k < n; k++) {
       i = (((i + direction) % n) + n) % n;
       if (state.isDisplayed(i)) {
-        break;
+        this.atomCursor = i;
+        this.model.hoveredAtomProperty.value = i;
+        this.addAccessibleResponse(this.currentAtomStringProperty.value);
+        return;
       }
     }
-    this.atomCursor = i;
-    this.model.hoveredAtomProperty.value = i;
-    this.addAccessibleResponse(this.currentAtomStringProperty.value);
+    this.atomCursor = -1;
+    this.model.hoveredAtomProperty.value = null;
   }
 
   private updateTooltip(): void {

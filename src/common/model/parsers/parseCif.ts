@@ -165,8 +165,12 @@ export function parseCif(text: string, fallbackTitle: string, range: Vec3 = [1, 
     const typeSymbol = (row[cType] ?? "").replace(/[\d+-]+$/, "");
     const element = isElementSymbol(typeSymbol) ? elementForSymbol(typeSymbol) : elementFromLabel(label);
     const occupancy = cOcc >= 0 ? cifNumber(row[cOcc]) : 1;
+    const fractional: Vec3 = [cifNumber(row[cx]), cifNumber(row[cy]), cifNumber(row[cz])];
+    if (!fractional.every(Number.isFinite)) {
+      throw new StructureParseError("invalidCoordinates");
+    }
     sites.push({
-      fractional: [cifNumber(row[cx]), cifNumber(row[cy]), cifNumber(row[cz])],
+      fractional,
       data: { element, label, occupancy: Number.isFinite(occupancy) ? occupancy : 1 },
     });
   }
@@ -192,6 +196,7 @@ export function parseCif(text: string, fallbackTitle: string, range: Vec3 = [1, 
     atoms,
     frames: [{ comment: title, positions, vibrations: null }],
     unitCell: cell,
+    cellRange: range,
     skipLikePairs: true,
   });
 }

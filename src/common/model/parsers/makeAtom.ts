@@ -46,3 +46,13 @@ export class StructureParseError extends Error {
     this.name = "StructureParseError";
   }
 }
+
+/** A coordinate must be present and finite; Number("") must not turn missing data into zero. */
+export function parseCoordinate(text: string | undefined): number {
+  const value = text?.trim();
+  const number = value ? Number(value) : Number.NaN;
+  if (!Number.isFinite(number)) {
+    throw new StructureParseError("invalidCoordinates");
+  }
+  return number;
+}

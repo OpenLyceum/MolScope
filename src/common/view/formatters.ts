@@ -74,8 +74,23 @@ export function formatScriptMessage(message: ScriptMessage): string {
   const patterns = StringManager.getInstance().getScriptMessages();
   const pattern = patterns[`${message.key}StringProperty`].value;
   const args: Record<string, string | number> = { ...message.args };
+  if (message.key === "loadFailed" && typeof args["reason"] === "string") {
+    args["reason"] = formatLoadError(args["reason"]);
+  }
   if (message.key === "measured" && typeof args["value"] === "number") {
     args["value"] = formatMeasurement(Number(args["count"] ?? 2), args["value"]);
   }
   return StringUtils.fillIn(pattern, args);
+}
+
+/** Translate known parse reasons while preserving server/network diagnostics. */
+export function formatLoadError(reason: string): string {
+  const errors = StringManager.getInstance().getParseErrors();
+  if (reason === "invalidCoordinates") {
+    return errors.invalidCoordinatesStringProperty.value;
+  }
+  if (reason === "incompatibleFrames") {
+    return errors.incompatibleFramesStringProperty.value;
+  }
+  return reason;
 }

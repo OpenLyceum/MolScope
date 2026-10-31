@@ -163,6 +163,11 @@ export class StringManager {
     return stringProperties.script;
   }
 
+  /** Actionable validation errors from structure imports. */
+  public getParseErrors() {
+    return stringProperties.parseErrors;
+  }
+
   /** Keyboard-help dialog labels. */
   public getKeyboardHelp() {
     return stringProperties.keyboardHelp;

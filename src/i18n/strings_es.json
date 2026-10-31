@@ -23,6 +23,7 @@
     "vibrate": "Vibrar",
     "animate": "Animar",
     "cells": "Celdas",
+    "customCells": "Personalizado: {{a}}×{{b}}×{{c}}",
     "frame": "Fotograma {{n}} / {{count}}",
     "previousFrame": "Fotograma anterior",
     "nextFrame": "Fotograma siguiente",
@@ -37,6 +38,10 @@
     "selectAll": "Seleccionar todo",
     "selectNone": "Deseleccionar todo",
     "applyToSelection": "Aplicar a la selección"
+  },
+  "parseErrors": {
+    "invalidCoordinates": "El archivo contiene coordenadas o vectores de vibración ausentes o no válidos.",
+    "incompatibleFrames": "Los registros describen moléculas diferentes. Abre cada molécula en un archivo separado."
   },
   "groups": {
     "basics": "Moléculas pequeñas",

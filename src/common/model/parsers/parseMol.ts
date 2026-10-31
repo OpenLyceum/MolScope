@@ -4,13 +4,14 @@
  * MDL Molfile / SDF (V2000). Reads the header title, the atom block (coordinates,
  * symbol, charge code), `M  CHG` charges and the bond block with bond orders, which
  * is why benzene and caffeine show their double bonds. Multiple SDF records with the
- * same atom count load as frames.
+ * same atom identities, charges and bond graph load as frames; mixed compounds are rejected.
  */
 
 import { elementForSymbol } from "../Elements.js";
 import type { Atom, Bond, Frame, Structure } from "../Structure.js";
 import { buildStructure } from "../StructureBuilder.js";
-import { makeAtom, StructureParseError } from "./makeAtom.js";
+import { framesCompatible } from "./frameCompatibility.js";
+import { makeAtom, parseCoordinate, StructureParseError } from "./makeAtom.js";
 
 /** V2000 charge codes: 1 = +3, 2 = +2, 3 = +1, 5 = −1, 6 = −2, 7 = −3. */
 const CHARGE_CODES: Record<string, number> = { "1": 3, "2": 2, "3": 1, "5": -1, "6": -2, "7": -3 };
@@ -41,9 +42,9 @@ export function parseMol(text: string, fallbackTitle: string): Structure {
     const charges = new Array<number>(atomCount).fill(0);
     for (let i = 0; i < atomCount; i++) {
       const row = lines[countsIndex + 1 + i] ?? "";
-      positions[3 * i] = Number(row.slice(0, 10));
-      positions[3 * i + 1] = Number(row.slice(10, 20));
-      positions[3 * i + 2] = Number(row.slice(20, 30));
+      positions[3 * i] = parseCoordinate(row.slice(0, 10));
+      positions[3 * i + 1] = parseCoordinate(row.slice(10, 20));
+      positions[3 * i + 2] = parseCoordinate(row.slice(20, 30));
       symbols.push(row.slice(31, 34).trim());
       charges[i] = CHARGE_CODES[row.slice(36, 39).trim()] ?? 0;
     }
@@ -65,8 +66,8 @@ export function parseMol(text: string, fallbackTitle: string): Structure {
       atoms = recordAtoms;
       bonds = recordBonds;
       title = (lines[0] ?? "").trim();
-    } else if (atomCount !== atoms.length) {
-      break;
+    } else if (!framesCompatible(atoms, recordAtoms, bonds, recordBonds)) {
+      throw new StructureParseError("incompatibleFrames");
     }
     frames.push({ comment: (lines[0] ?? "").trim(), positions, vibrations: null });
   }

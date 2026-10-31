@@ -28,6 +28,16 @@ the same `ViewerModel` operations, which edit those arrays for the selected atom
 `displayRevisionProperty`; the canvas repaints on that. A menu value (`styleProperty`,
 `colorSchemeProperty`) is only "what was last applied", not the truth — scripts can mix styles.
 
+- **Imports are validated before installation.** Multi-record frames must share atom identities,
+  charges and explicit topology (XYZ: element order). Coordinates and vibration vectors must be
+  finite; validation failure preserves the active structure and camera.
+- **New actions supersede pending scripts.** Script generation guards commands and console
+  output, while load tokens guard structure assignment. ScriptEngine's own loads pass
+  `fromScript` so they do not cancel the active script.
+- **Actual crystal packing lives on `Structure.cellRange`.** `cellRangeProperty` is a cubic
+  preset (1–3), with 0 meaning Custom. Render the full vector, not a cube reconstructed from the
+  preset. Custom CIF imports start at 1×1×1 and retain source text for repacking.
+
 ## Key files
 
 | File | Purpose |
@@ -66,6 +76,8 @@ the same `ViewerModel` operations, which edit those arrays for the selected atom
 - Each screen summary has a **live** current-details paragraph (`createCurrentDetailsProperty`).
 - `ControlFactory` builders take `accessibleName` as a required argument.
 - `pdomOrder`: viewer → control panel → info panel → console → Reset All.
+- Keyboard picking must revalidate the cursor's visibility; an all-hidden structure has no
+  candidate. Sidebar positions/measurements must observe vibration time and enable changes.
 
 ## Compliance carve-outs
 
@@ -106,6 +118,8 @@ open PRs that fight the overrides. Revisit when SceneryStack drops or re-pins th
 | `tests/common/selection.test.ts` | The atom-expression language on crambin |
 | `tests/common/geometry.test.ts` | Distance/angle/dihedral signs, rotation drift, cell orthogonalisation, symmetry operators |
 | `tests/common/script-engine.test.ts` | Script commands end to end on a `ViewerModel` (fetch stubbed), picking, vibration |
+| `tests/common/review-regressions.test.ts` | Frame compatibility, invalid imports preserving state, full packing ranges, late load success/failure after reset or newer actions (Vitest happy-dom) |
+| `tests/browser/review-regressions.spec.ts` | Live readouts, keyboard visibility, native console/reset/file imports, packing controls, translated errors; run with `FUZZ_PORT=5192 npx playwright test tests/browser` |
 | `tests/memory-leak.test.ts` | Viewer node, both panels and the console are collected after dispose |
 
 **Leak gotcha:** `Panel.dispose()` does not dispose its content, and a `Text` bound to a global

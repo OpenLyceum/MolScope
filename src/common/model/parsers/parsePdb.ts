@@ -12,7 +12,7 @@ import { SecondaryStructure } from "../Structure.js";
 import type { StructureRange } from "../StructureBuilder.js";
 import { buildStructure } from "../StructureBuilder.js";
 import { UnitCell } from "../UnitCell.js";
-import { makeAtom, StructureParseError } from "./makeAtom.js";
+import { makeAtom, parseCoordinate, StructureParseError } from "./makeAtom.js";
 
 export function parsePdb(text: string, fallbackTitle: string): Structure {
   const lines = text.split(/\r?\n/);
@@ -42,7 +42,11 @@ export function parsePdb(text: string, fallbackTitle: string): Structure {
       if (altLoc !== " " && altLoc !== "A" && altLoc !== "1") {
         continue;
       }
-      current.push(Number(line.slice(30, 38)), Number(line.slice(38, 46)), Number(line.slice(46, 54)));
+      current.push(
+        parseCoordinate(line.slice(30, 38)),
+        parseCoordinate(line.slice(38, 46)),
+        parseCoordinate(line.slice(46, 54)),
+      );
       if (modelIndex > 1) {
         continue; // Later models contribute coordinates only.
       }

@@ -11,6 +11,7 @@
  */
 
 import type { ElementData } from "./Elements.js";
+import type { Vec3 } from "./Geometry.js";
 import type { UnitCell } from "./UnitCell.js";
 
 /** Secondary-structure class of a residue (for cartoons and structure colouring). */
@@ -105,6 +106,8 @@ export type Structure = {
   readonly frames: readonly Frame[];
   /** Crystal cell when the file defines one (CIF, PDB CRYST1). */
   readonly unitCell: UnitCell | null;
+  /** Actual packed dimensions along a, b, c; [1,1,1] for unpacked files. */
+  readonly cellRange: Vec3;
   /** True for structures with polymer residues (cartoon/trace make sense). */
   readonly isBiomolecule: boolean;
   /** Where protein secondary structure came from, so the view can say when it is only estimated. */

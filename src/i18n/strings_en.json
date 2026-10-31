@@ -23,6 +23,7 @@
     "vibrate": "Vibrate",
     "animate": "Animate",
     "cells": "Cells",
+    "customCells": "Custom: {{a}}×{{b}}×{{c}}",
     "frame": "Frame {{n}} / {{count}}",
     "previousFrame": "Previous frame",
     "nextFrame": "Next frame",
@@ -37,6 +38,10 @@
     "selectAll": "Select all",
     "selectNone": "Select none",
     "applyToSelection": "Apply to selection"
+  },
+  "parseErrors": {
+    "invalidCoordinates": "The file contains missing or invalid coordinates or vibration vectors.",
+    "incompatibleFrames": "The records describe different molecules. Open each molecule in a separate file."
   },
   "groups": {
     "basics": "Small molecules",

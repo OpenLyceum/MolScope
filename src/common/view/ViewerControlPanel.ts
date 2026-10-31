@@ -8,8 +8,9 @@
  */
 
 import { DerivedProperty, Multilink, NumberProperty, PatternStringProperty, Property } from "scenerystack/axon";
+import { StringUtils } from "scenerystack/phetcommon";
 import { HBox, HSeparator, Node, RichText, Text, VBox } from "scenerystack/scenery";
-import { ArrowButton } from "scenerystack/sun";
+import { AquaRadioButtonGroup, ArrowButton } from "scenerystack/sun";
 import { StringManager } from "../../i18n/StringManager.js";
 import MolScopeColors from "../../MolScopeColors.js";
 import { FLAT_RECTANGULAR_BUTTON_OPTIONS } from "../MolScopeButtonOptions.js";
@@ -31,7 +32,6 @@ import {
   labeled,
   pairRow,
   pushButton,
-  radioGroup,
   SMALL_FONT,
 } from "./ControlFactory.js";
 import { disposeSubtree } from "./disposeSubtree.js";
@@ -61,6 +61,7 @@ export class ViewerControlPanel extends MolScopePanel {
     const inner = options.width - 24;
     const column = (inner - 8) / 2;
     const disposers: (() => void)[] = [];
+    const ownedProperties: { dispose(): void }[] = [];
 
     // ── Structure: collection combo + one structure combo per collection ───────
     const groups = libraryGroups(model.options.category);
@@ -214,24 +215,51 @@ export class ViewerControlPanel extends MolScopePanel {
       ),
     ];
     if (options.showCrystalOptions) {
+      const customPackingProperty = new DerivedProperty([model.structureProperty], (structure) => {
+        if (!structure) {
+          return false;
+        }
+        const [a, b, c] = structure.cellRange;
+        return !(a === b && b === c && a >= 1 && a <= 3);
+      });
+      const packingLabelProperty = new DerivedProperty(
+        [model.structureProperty, controls.customCellsStringProperty],
+        (structure, pattern) => {
+          const [a, b, c] = structure?.cellRange ?? [1, 1, 1];
+          return StringUtils.fillIn(pattern, { a, b, c });
+        },
+      );
+      const cellRadio = new AquaRadioButtonGroup(
+        model.cellRangeProperty,
+        [
+          ...[1, 2, 3].map((n) => ({
+            value: n,
+            createNode: () => label(new Property(`${n}×${n}×${n}`), inner - 30),
+            options: { accessibleName: `${n}×${n}×${n}` },
+          })),
+          {
+            value: 0,
+            createNode: () => label(packingLabelProperty, inner - 30),
+            options: { accessibleName: packingLabelProperty, visibleProperty: customPackingProperty },
+          },
+        ],
+        {
+          spacing: 4,
+          radioButtonOptions: { radius: 6, selectedColor: MolScopeColors.accentColorProperty },
+          accessibleName: controls.cellsStringProperty,
+        },
+      );
+      ownedProperties.push(customPackingProperty, packingLabelProperty);
       toggles.push(
         pairRow(
           checkbox(model.unitCellProperty, controls.unitCellStringProperty, column - 24),
           checkbox(model.polyhedraProperty, controls.polyhedraStringProperty, column - 24),
           column,
         ),
-        new HBox({
-          spacing: 10,
-          children: [
-            label(controls.cellsStringProperty, 60),
-            radioGroup(
-              model.cellRangeProperty,
-              [1, 2, 3].map((n) => ({ value: n, label: new Property(`${n}×${n}×${n}`) })),
-              controls.cellsStringProperty,
-              60,
-              "horizontal",
-            ),
-          ],
+        new VBox({
+          align: "left",
+          spacing: 4,
+          children: [label(controls.cellsStringProperty, 60), cellRadio],
         }),
       );
     } else {
@@ -333,6 +361,9 @@ export class ViewerControlPanel extends MolScopePanel {
       hasFramesProperty.dispose();
       hasVibrationsProperty.dispose();
       disposeSubtree(content);
+      for (const property of ownedProperties) {
+        property.dispose();
+      }
       for (const g of groupCombos) {
         g.local.dispose();
       }

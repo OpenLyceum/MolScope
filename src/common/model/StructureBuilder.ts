@@ -8,6 +8,7 @@
  */
 
 import { perceiveBonds } from "./BondPerception.js";
+import type { Vec3 } from "./Geometry.js";
 import type {
   Atom,
   Bond,
@@ -19,6 +20,7 @@ import type {
   Structure,
 } from "./Structure.js";
 import { ResidueKind, SecondaryStructure, SecondaryStructureSource } from "./Structure.js";
+import { validateFrames } from "./StructureValidation.js";
 import type { UnitCell } from "./UnitCell.js";
 
 /** Standard amino-acid residue names (plus common variants). */
@@ -79,10 +81,12 @@ export type BuildInput = {
   readonly ranges?: readonly StructureRange[];
   readonly unitCell?: UnitCell | null;
   readonly skipLikePairs?: boolean;
+  readonly cellRange?: Vec3;
 };
 
 export function buildStructure(input: BuildInput): Structure {
   const atoms = input.atoms;
+  validateFrames(atoms.length, input.frames);
   const firstFrame = input.frames[0];
   const positions = firstFrame ? firstFrame.positions : new Float64Array(0);
   const residues = buildResidues(atoms);
@@ -111,6 +115,7 @@ export function buildStructure(input: BuildInput): Structure {
     residues,
     frames: input.frames,
     unitCell: input.unitCell ?? null,
+    cellRange: input.cellRange ? [...input.cellRange] : [1, 1, 1],
     isBiomolecule,
     secondaryStructureSource,
   };

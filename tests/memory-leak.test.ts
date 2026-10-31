@@ -31,6 +31,18 @@ const model = new ViewerModel({
 });
 
 describeDisposalLeaks([
+  {
+    name: "CrystalControlPanel",
+    create: () =>
+      new ViewerControlPanel(model, new Node(), {
+        styles: SMALL_MOLECULE_STYLES,
+        colorSchemes: [ColorScheme.ELEMENT],
+        showBiomoleculeOptions: false,
+        showCrystalOptions: true,
+        openFile: () => undefined,
+        width: 236,
+      }),
+  },
   { name: "MoleculeViewerNode", create: () => new MoleculeViewerNode(model, new Bounds2(0, 0, 400, 300)) },
   {
     name: "StructureInfoPanel",

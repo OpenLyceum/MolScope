@@ -28,8 +28,9 @@ import { parseStructure } from "./parsers/parseStructure.js";
 import { fetchText, isPdbId, pubChemUrl, rcsbUrl } from "./RemoteSources.js";
 import { Rotation3 } from "./Rotation3.js";
 import type { LoadRequest, PickingModeValue, ScriptMessage, ScriptTarget, ToggleOptionValue } from "./ScriptEngine.js";
-import { PickingMode, ScriptEngine, ToggleOption } from "./ScriptEngine.js";
+import { PickingMode, ScriptCancelledError, ScriptEngine, ToggleOption } from "./ScriptEngine.js";
 import type { Bond, Frame, Structure } from "./Structure.js";
+import { validateFrames } from "./StructureValidation.js";
 
 /** Default spin rate, degrees per second (Jmol `spin on` uses 30). */
 export const DEFAULT_SPIN_RATE = 30;
@@ -113,7 +114,7 @@ export class ViewerModel implements TModel, ScriptTarget {
   public readonly unitCellProperty = new BooleanProperty(false);
   public readonly axesProperty = new BooleanProperty(false);
   public readonly polyhedraProperty = new BooleanProperty(false);
-  /** Unit cells packed along each axis for crystals (1–3). */
+  /** Cubic packing preset (1–3), or 0 when the actual dimensions are custom. */
   public readonly cellRangeProperty = new NumberProperty(1);
 
   // Frames and vibration
@@ -137,6 +138,9 @@ export class ViewerModel implements TModel, ScriptTarget {
   private readonly scriptEngine: ScriptEngine;
   private readonly fetcher: (url: string) => Promise<string>;
   private loadToken = 0;
+  private scriptGeneration = 0;
+  /** Original CIF, retained so custom files can be repacked with the same preset controls. */
+  private cifSource: { readonly text: string; readonly name: string } | null = null;
   private animationAccumulator = 0;
   /** Geometry derived from one frame's positions; recomputed when the frame changes. */
   private hydrogenBondCache: { readonly frame: Frame; readonly bonds: Bond[] } | null = null;
@@ -170,8 +174,14 @@ export class ViewerModel implements TModel, ScriptTarget {
     });
     this.cellRangeProperty.lazyLink((range) => {
       const entry = libraryEntry(this.entryIdProperty.value);
-      if (entry?.range && !this.settingRange) {
+      if (this.settingRange || range <= 0) {
+        return;
+      }
+      if (entry?.range) {
         this.load({ source: "library", id: entry.id, range: [range, range, range] }).catch(() => undefined);
+      } else if (this.cifSource) {
+        const source = this.cifSource;
+        this.loadText(source.text, source.name, [range, range, range]);
       }
     });
   }
@@ -264,11 +274,15 @@ export class ViewerModel implements TModel, ScriptTarget {
   /** Loads the selected library entry (the screen's combo box). */
   public loadEntry(id: string): Promise<{ title: string; atomCount: number }> {
     const entry = libraryEntry(id);
-    const range = this.cellRangeProperty.value;
-    return this.load({ source: "library", id, range: entry?.range ? [range, range, range] : [1, 1, 1] });
+    const preset = this.cellRangeProperty.value;
+    const range: Vec3 = preset > 0 ? [preset, preset, preset] : (this.structure?.cellRange ?? [1, 1, 1]);
+    return this.load({ source: "library", id, range: entry?.range ? range : [1, 1, 1] });
   }
 
-  public async load(request: LoadRequest): Promise<{ title: string; atomCount: number }> {
+  public async load(request: LoadRequest, fromScript = false): Promise<{ title: string; atomCount: number }> {
+    if (!fromScript) {
+      this.scriptGeneration++;
+    }
     const token = ++this.loadToken;
     this.loadStateProperty.value = LoadState.LOADING;
     try {
@@ -293,44 +307,45 @@ export class ViewerModel implements TModel, ScriptTarget {
         text = await this.fetcher(pubChemUrl(request.name));
         name = `${request.name}.sdf`;
       }
+      if (token !== this.loadToken) {
+        throw new ScriptCancelledError();
+      }
       const title = request.source === "pubchem" ? request.name : request.source === "pdb" ? request.id : "";
       const structure = parseStructure(text, name, title, range);
-      if (token !== this.loadToken) {
-        return { title: structure.title, atomCount: structure.atoms.length };
-      }
       // A script can load another screen's entry (`load 1crn` on Molecules); this screen's menus
       // cannot show it, so it counts as a custom structure here.
       const ownEntry = request.source === "library" && this.entries.some((e) => e.id === request.id);
       this.entryIdProperty.value = ownEntry ? request.id : CUSTOM_ENTRY_ID;
-      if (structure.unitCell && structure.format === "CIF") {
-        this.settingRange = true;
-        this.cellRangeProperty.value = range[0];
-        this.settingRange = false;
-      }
       this.setStructure(structure);
+      this.cifSource = structure.format === "CIF" ? { text, name } : null;
       this.loadStateProperty.value = LoadState.IDLE;
       return { title: structure.title, atomCount: structure.atoms.length };
     } catch (error) {
-      if (token === this.loadToken) {
-        this.loadStateProperty.value = LoadState.ERROR;
-        this.loadErrorProperty.value = error instanceof Error ? error.message : String(error);
+      if (token !== this.loadToken) {
+        throw new ScriptCancelledError();
       }
+      this.loadStateProperty.value = LoadState.ERROR;
+      this.loadErrorProperty.value = error instanceof Error ? error.message : String(error);
       throw error;
     }
   }
 
   /** Loads text from a user-opened or dropped file. */
-  public loadText(text: string, fileName: string): Structure {
+  public loadText(text: string, fileName: string, range: Vec3 = [1, 1, 1]): Structure {
+    this.scriptGeneration++;
     ++this.loadToken;
-    const structure = parseStructure(text, fileName);
+    const structure = parseStructure(text, fileName, "", range);
     this.entryIdProperty.value = CUSTOM_ENTRY_ID;
     this.setStructure(structure);
+    this.cifSource = structure.format === "CIF" ? { text, name: fileName } : null;
     this.loadStateProperty.value = LoadState.IDLE;
     return structure;
   }
 
   /** Installs a structure with this screen's default rendering. */
   public setStructure(structure: Structure): void {
+    validateFrames(structure.atoms.length, structure.frames);
+    this.cifSource = null;
     this.state = new DisplayState(structure);
     this.hydrogenBondCache = null;
     this.polyhedraCache = null;
@@ -356,6 +371,13 @@ export class ViewerModel implements TModel, ScriptTarget {
     }
     // Notify the structure before resetting the view, so views see the new atoms first.
     this.structureProperty.value = structure;
+    const [a, b, c] = structure.cellRange;
+    this.settingRange = true;
+    try {
+      this.cellRangeProperty.value = a === b && b === c && a >= 1 && a <= 3 ? a : 0;
+    } finally {
+      this.settingRange = false;
+    }
     this.resetView();
     this.displayChanged();
   }
@@ -558,8 +580,17 @@ export class ViewerModel implements TModel, ScriptTarget {
 
   /** Runs a script typed in the console and records its input and output. */
   public async runScript(script: string): Promise<readonly ScriptMessage[]> {
+    const generation = ++this.scriptGeneration;
+    // New scripts supersede an older pending load even if the new script only changes display.
+    ++this.loadToken;
+    if (this.loadStateProperty.value === LoadState.LOADING) {
+      this.loadStateProperty.value = LoadState.IDLE;
+    }
     this.appendConsole([{ kind: "input", text: script }]);
-    const messages = await this.scriptEngine.run(script);
+    const messages = await this.scriptEngine.run(script, () => generation === this.scriptGeneration);
+    if (generation !== this.scriptGeneration) {
+      return [];
+    }
     this.appendConsole(messages.map((message) => ({ kind: "message", message })));
     return messages;
   }
@@ -643,6 +674,7 @@ export class ViewerModel implements TModel, ScriptTarget {
   }
 
   public reset(): void {
+    this.scriptGeneration++;
     this.labelModeProperty.reset();
     this.showHydrogensProperty.reset();
     this.selectionHalosProperty.reset();

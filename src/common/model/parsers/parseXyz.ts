@@ -10,7 +10,8 @@
 import { elementForNumber, elementForSymbol } from "../Elements.js";
 import type { Atom, Frame, Structure } from "../Structure.js";
 import { buildStructure } from "../StructureBuilder.js";
-import { makeAtom, StructureParseError } from "./makeAtom.js";
+import { framesCompatible } from "./frameCompatibility.js";
+import { makeAtom, parseCoordinate, StructureParseError } from "./makeAtom.js";
 
 export function parseXyz(text: string, fallbackTitle: string): Structure {
   const lines = text.split(/\r?\n/);
@@ -44,18 +45,18 @@ export function parseXyz(text: string, fallbackTitle: string): Structure {
         ? elementForNumber(Number(token))
         : elementForSymbol(token.replace(/\d+$/, ""));
       frameAtoms.push(makeAtom({ element, serial: i + 1 }));
-      positions[3 * i] = Number(fields[1]);
-      positions[3 * i + 1] = Number(fields[2]);
-      positions[3 * i + 2] = Number(fields[3]);
+      positions[3 * i] = parseCoordinate(fields[1]);
+      positions[3 * i + 1] = parseCoordinate(fields[2]);
+      positions[3 * i + 2] = parseCoordinate(fields[3]);
       if (fields.length >= 7) {
         vibrations ??= new Float64Array(3 * count);
-        vibrations[3 * i] = Number(fields[4]);
-        vibrations[3 * i + 1] = Number(fields[5]);
-        vibrations[3 * i + 2] = Number(fields[6]);
+        vibrations[3 * i] = parseCoordinate(fields[4]);
+        vibrations[3 * i + 1] = parseCoordinate(fields[5]);
+        vibrations[3 * i + 2] = parseCoordinate(fields[6]);
       }
     }
-    if (frames.length > 0 && count !== atoms.length) {
-      break; // A different molecule: keep the first trajectory only.
+    if (frames.length > 0 && !framesCompatible(atoms, frameAtoms)) {
+      throw new StructureParseError("incompatibleFrames");
     }
     if (frames.length === 0) {
       atoms = frameAtoms;

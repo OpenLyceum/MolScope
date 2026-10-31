@@ -73,6 +73,24 @@ Library files are imported with `import.meta.glob("./data/*", { query: "?raw" })
 one lazily loaded chunk per file and Workbox precaches them for offline use; the single-file build
 inlines them. Remote loads go through `RemoteSources.fetchText`, replaceable via
 `ViewerModelOptions.fetchText` for tests. A load token discards stale results when loads overlap.
+An independent script generation cancels the entire superseded command sequence and its console
+output. ScriptEngine marks its own load calls with `fromScript`, so they do not cancel their
+parent run; external loads, new scripts and reset invalidate it. Cancellation is distinct from
+a successful load or an error shown to the user.
+
+`Structure.cellRange` is the actual three-axis packing state used by the renderer. The scalar
+`cellRangeProperty` is only the cubic preset (1–3, or 0 for Custom). Installing a structure syncs
+that preset under a guard against recursive loads. Imported CIF text is retained for later
+repacking. Custom-row Properties are disposed after the radio controls that observe them.
+
+All parsers reject nonfinite positions/vibration vectors before bonding or display updates;
+`setStructure` checks the invariant again for direct callers. Frame compatibility compares
+ordered atom identities/charges and canonical bond keys (independent of bond endpoint order).
+Translated errors are formatted in the view, while parsers retain machine-readable reasons.
+
+The info panel observes vibration time and enable state as well as frame changes. Keyboard
+cursor navigation only announces displayed candidates; Enter/Space revalidates visibility so a
+hidden old cursor cannot be picked.
 
 ## Disposal
 

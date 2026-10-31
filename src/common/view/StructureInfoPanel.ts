@@ -20,7 +20,13 @@ import { SecondaryStructureSource } from "../model/Structure.js";
 import { LoadState, type ViewerModel } from "../model/ViewerModel.js";
 import { CONTROL_FONT, heading, pushButton, radioGroup, SMALL_FONT } from "./ControlFactory.js";
 import { disposeSubtree } from "./disposeSubtree.js";
-import { formatAtomDescription, formatMeasurement, formatPosition, structureDisplayName } from "./formatters.js";
+import {
+  formatAtomDescription,
+  formatLoadError,
+  formatMeasurement,
+  formatPosition,
+  structureDisplayName,
+} from "./formatters.js";
 
 /** Measurements listed before older ones scroll off. */
 const MAX_LISTED_MEASUREMENTS = 5;
@@ -89,7 +95,9 @@ export class StructureInfoPanel extends MolScopePanel {
       statusText.string = loading
         ? info.loadingStringProperty.value
         : error
-          ? StringUtils.fillIn(info.loadErrorStringProperty.value, { reason: model.loadErrorProperty.value })
+          ? StringUtils.fillIn(info.loadErrorStringProperty.value, {
+              reason: formatLoadError(model.loadErrorProperty.value),
+            })
           : "";
       statusText.visible = loading || error;
       if (!(structure && state)) {
@@ -216,6 +224,8 @@ export class StructureInfoPanel extends MolScopePanel {
         model.measurementsProperty,
         model.structureProperty,
         model.frameIndexProperty,
+        model.vibrationTimeProperty,
+        model.vibrationProperty,
       ],
       updatePicking,
     );

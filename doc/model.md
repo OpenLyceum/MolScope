@@ -11,9 +11,16 @@ list of bonds with orders, residues, and one or more frames of Cartesian coordin
 | Format | Read | Notes |
 |---|---|---|
 | PDB | ATOM/HETATM, HELIX/SHEET, CONECT, CRYST1, MODEL | First alternate location only; NMR ensembles become frames |
-| MOL/SDF (V2000) | atoms, bonds with orders, charges | Aromatic bonds (type 4) become order 1.5; several same-size records become frames |
+| MOL/SDF (V2000) | atoms, bonds with orders, charges | Aromatic bonds (type 4) become order 1.5; compatible conformer records become frames |
 | XYZ | element, x, y, z [, vx, vy, vz] | Multi-frame trajectories; the optional triple is a vibration vector |
 | CIF | cell, symmetry operators, fractional sites | Packed into 1–4 cells per axis; `0.465(4)` reads as 0.465 |
+
+Multi-record MOL/SDF files become frames only when atom identities/order, formal charges and
+the explicit bond graph match. XYZ trajectories require the same element sequence. Incompatible
+records are rejected with a translated error rather than showing one molecule's coordinates
+with another molecule's chemistry. Every frame's coordinates and optional vibration vectors must
+be present and finite before a structure is installed; a rejected import preserves the loaded
+structure and camera.
 
 ### Bonding
 
@@ -44,6 +51,11 @@ coordinates. `packCell` applies every operator, wraps into [0, 1), removes dupli
 (fractional), and replicates over the requested cells *including* sites on the far faces, so a
 1×1×1 rock-salt cell shows the familiar 27 ions.
 
+The loaded `Structure.cellRange` retains all three packing dimensions. Its outline uses those
+dimensions, including asymmetric script requests. Cubic presets offer 1, 2 and 3 cells per axis;
+other ranges appear as a selected Custom choice. A newly imported CIF starts at 1×1×1 and its
+source text is retained so the same presets can repack it.
+
 ## Measurements
 
 - distance |**b** − **a**| in Å;
@@ -52,7 +64,7 @@ coordinates. `packCell` applies every operator, wraps into [0, 1), removes dupli
   computed as atan2(((**n₁** × **n₂**) · **b̂₂**), **n₁** · **n₂**).
 
 Values are recomputed from the displayed positions each frame, so they follow trajectories and
-vibrations.
+vibrations in both the canvas and sidebar, including when vibration is switched off.
 
 ## Display model
 
@@ -121,6 +133,10 @@ ligand backbone sidechain helix sheet`, element names and `_Sym`, residue specs
 `[RES]num-num:chain.atom` (any part optional, `*` wildcard), comparisons on `atomno resno elemno
 temperature occupancy formalCharge x y z` and `element chain group atomname`, `within(d, EXPR)`,
 combined with `not ! and & or | ,` and parentheses.
+
+A new script, file/menu load or Reset All supersedes an older script operation. A pending old
+load cannot install its structure, run later commands on the new molecule, or append output to
+the newer console state. Commands within one active script still execute in order.
 
 ### Differences from Jmol
 
