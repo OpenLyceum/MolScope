@@ -30,7 +30,10 @@ export function hillFormula(structure: Structure): FormulaTerm[] {
   return symbols.map((symbol) => ({ symbol, count: counts.get(symbol) ?? 0 }));
 }
 
-/** "C8H10N4O2" with plain digits (the view renders subscripts). */
+/**
+ * "C8H10N4O2" with plain digits (the view renders subscripts).
+ * @internal Exported for unit tests; not part of the application API.
+ */
 export function formulaString(terms: readonly FormulaTerm[]): string {
   return terms.map((t) => (t.count === 1 ? t.symbol : `${t.symbol}${t.count}`)).join("");
 }

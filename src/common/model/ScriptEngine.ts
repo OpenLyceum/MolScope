@@ -26,6 +26,7 @@ import type { DisplayState, DisplayStyleValue } from "./DisplayState.js";
 import { DisplayStyle, WIREFRAME_LINE } from "./DisplayState.js";
 import type { Vec3 } from "./Geometry.js";
 
+/** @internal Exported for unit tests; not part of the application API. */
 export const ScriptMessageKey = {
   SELECTED: "selected",
   LOADED: "loaded",
@@ -161,6 +162,7 @@ const COMMANDS = [
 /**
  * Splits a script into commands on `;` and new lines, dropping `#` comments, keeping quoted text intact.
  * A quote only opens a string at the start of a word, so nucleic-acid primes (`.C4'`) stay atom names.
+ * @internal Exported for unit tests; not part of the application API.
  */
 export function splitCommands(script: string): string[] {
   const out: string[] = [];
