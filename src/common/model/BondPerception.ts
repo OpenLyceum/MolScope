@@ -10,13 +10,13 @@
 import type { Atom, Bond } from "./Structure.js";
 
 /** Jmol's default `bondTolerance`, Å. */
-export const BOND_TOLERANCE = 0.45;
+const BOND_TOLERANCE = 0.45;
 
 /** Jmol's default `minBondDistance`, Å. */
-export const MIN_BOND_DISTANCE = 0.4;
+const MIN_BOND_DISTANCE = 0.4;
 
 /** Pauling electronegativity at or above which an element counts as an anion former (S, N, O, halogens…). */
-export const ANION_ELECTRONEGATIVITY = 2.5;
+const ANION_ELECTRONEGATIVITY = 2.5;
 
 export type BondPerceptionOptions = {
   /**

@@ -17,12 +17,12 @@ import type { Structure } from "./Structure.js";
 import { ResidueKind, SecondaryStructure } from "./Structure.js";
 
 /** Spline samples per residue interval. */
-export const SAMPLES_PER_RESIDUE = 6;
+const SAMPLES_PER_RESIDUE = 6;
 
 /** Ribbon half-widths, Å. */
-export const HELIX_HALF_WIDTH = 1.25;
-export const SHEET_HALF_WIDTH = 1.1;
-export const ARROW_HALF_WIDTH = 1.8;
+const HELIX_HALF_WIDTH = 1.25;
+const SHEET_HALF_WIDTH = 1.1;
+const ARROW_HALF_WIDTH = 1.8;
 /** Tube radius for coils, traces and nucleic backbones, Å. */
 export const TUBE_RADIUS = 0.3;
 

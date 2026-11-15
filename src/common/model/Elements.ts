@@ -125,11 +125,6 @@ if (hydrogen) {
   BY_SYMBOL.set("T", hydrogen);
 }
 
-/** Every element in atomic-number order (index 0 is hydrogen). */
-export function allElements(): readonly ElementData[] {
-  return ELEMENTS;
-}
-
 /** Element for a symbol, case-insensitive ("CL", "cl", "Cl"); {@link UNKNOWN_ELEMENT} if unknown. */
 export function elementForSymbol(symbol: string): ElementData {
   return BY_SYMBOL.get(symbol.trim().toUpperCase()) ?? UNKNOWN_ELEMENT;

@@ -165,7 +165,7 @@ function parseFraction(text: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-export function applyOperator(op: SymmetryOperator, f: Vec3): Vec3 {
+function applyOperator(op: SymmetryOperator, f: Vec3): Vec3 {
   const r = op.rotation;
   return [
     (r[0] ?? 0) * f[0] + (r[1] ?? 0) * f[1] + (r[2] ?? 0) * f[2] + op.translation[0],

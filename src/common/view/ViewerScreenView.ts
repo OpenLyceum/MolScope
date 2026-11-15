@@ -28,9 +28,9 @@ import { StructureInfoPanel } from "./StructureInfoPanel.js";
 import { ViewerControlPanel } from "./ViewerControlPanel.js";
 
 /** Panel widths and console height, view px. */
-export const LEFT_PANEL_WIDTH = 210;
-export const RIGHT_PANEL_WIDTH = 236;
-export const CONSOLE_HEIGHT = 96;
+const LEFT_PANEL_WIDTH = 210;
+const RIGHT_PANEL_WIDTH = 236;
+const CONSOLE_HEIGHT = 96;
 const GAP = 8;
 
 export type ViewerScreenConfig = {

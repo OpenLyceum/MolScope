@@ -20,10 +20,10 @@ import { ResidueKind } from "./Structure.js";
 export const WIREFRAME_LINE = -1;
 
 /** Jmol's default stick radius, Å (`wireframe 0.15`). */
-export const STICK_RADIUS = 0.15;
+const STICK_RADIUS = 0.15;
 
 /** Ball-and-stick ball size, fraction of the van der Waals radius (Jmol `spacefill 20%`). */
-export const BALL_FRACTION = 0.2;
+const BALL_FRACTION = 0.2;
 
 export const DisplayStyle = {
   WIREFRAME: "wireframe",
@@ -258,7 +258,7 @@ export class DisplayState {
  * Expands a Jmol label format: %a atom name, %e element, %i serial number,
  * %n residue name, %r residue number, %c chain, %b B-factor, %q occupancy, %% percent.
  */
-export function formatLabel(structure: Structure, index: number, format: string): string {
+function formatLabel(structure: Structure, index: number, format: string): string {
   const atom = structure.atoms[index];
   if (!atom) {
     return "";

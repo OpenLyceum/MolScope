@@ -59,7 +59,7 @@ export const AMINO_ACIDS = new Set([
 /** Standard nucleotide residue names (DNA and RNA). */
 export const NUCLEOTIDES = new Set(["A", "C", "G", "T", "U", "I", "DA", "DC", "DG", "DT", "DU", "DI"]);
 
-export const WATERS = new Set(["HOH", "WAT", "H2O", "DOD", "TIP", "TIP3", "SOL"]);
+const WATERS = new Set(["HOH", "WAT", "H2O", "DOD", "TIP", "TIP3", "SOL"]);
 
 /** A residue range from HELIX / SHEET records. */
 export type StructureRange = {

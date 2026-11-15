@@ -19,7 +19,7 @@ import { MOL_SCOPE_CHECKBOX_OPTIONS } from "../MolScopeControlOptions.js";
 
 export const CONTROL_FONT = new PhetFont(13);
 export const SMALL_FONT = new PhetFont(12);
-export const HEADING_FONT = new PhetFont({ size: 14, weight: "bold" });
+const HEADING_FONT = new PhetFont({ size: 14, weight: "bold" });
 
 export function heading(text: TReadOnlyProperty<string>, maxWidth: number): Text {
   return new Text(text, { font: HEADING_FONT, fill: MolScopeColors.textColorProperty, maxWidth });

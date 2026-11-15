@@ -23,7 +23,7 @@ export const LibraryCategory = {
 export type LibraryCategoryValue = (typeof LibraryCategory)[keyof typeof LibraryCategory];
 
 /** Sub-collections shown as a first combo box, so no single list outgrows the screen. */
-export const LibraryGroup = {
+const LibraryGroup = {
   BASICS: "basics",
   SHAPES: "shapes",
   BIOCHEMISTRY: "biochemistry",
@@ -71,7 +71,7 @@ function crystal(id: string, nameKey: string, codId: string, aliases: readonly s
   };
 }
 
-export const STRUCTURE_LIBRARY: readonly LibraryEntry[] = [
+const STRUCTURE_LIBRARY: readonly LibraryEntry[] = [
   molecule(LibraryGroup.BASICS, "water", "water"),
   molecule(LibraryGroup.BASICS, "ammonia", "ammonia"),
   molecule(LibraryGroup.BASICS, "methane", "methane"),

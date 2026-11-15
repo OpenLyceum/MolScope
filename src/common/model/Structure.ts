@@ -113,12 +113,3 @@ export type Structure = {
   /** Where protein secondary structure came from, so the view can say when it is only estimated. */
   readonly secondaryStructureSource: SecondaryStructureSourceValue;
 };
-
-/** Reads atom i's position from a frame without allocating. */
-export function atomPosition(frame: Frame, index: number, out: [number, number, number]): [number, number, number] {
-  const p = frame.positions;
-  out[0] = p[3 * index] ?? 0;
-  out[1] = p[3 * index + 1] ?? 0;
-  out[2] = p[3 * index + 2] ?? 0;
-  return out;
-}

@@ -52,6 +52,7 @@ script box on the Biomolecules screen.
 | `npm run test:fuzz` / `:quick` / `:long` | Playwright fuzz smoke, pointer + keyboard (30 s / 10 s / 300 s) |
 | `npm run check` | TypeScript type check |
 | `npm run lint` | Biome lint check |
+| `npm run knip` | Report unused files, exports, and dependencies (manual check) |
 | `npm run format` | Auto-format all files |
 | `npm run fix` | Lint + auto-fix |
 | `npm run icons` | Regenerate PNG icons from `public/icons/icon.svg` |

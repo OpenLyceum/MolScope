@@ -33,20 +33,20 @@ import type { Bond, Frame, Structure } from "./Structure.js";
 import { validateFrames } from "./StructureValidation.js";
 
 /** Default spin rate, degrees per second (Jmol `spin on` uses 30). */
-export const DEFAULT_SPIN_RATE = 30;
+const DEFAULT_SPIN_RATE = 30;
 
 /** Frames per second for trajectory animation. */
-export const ANIMATION_FPS = 10;
+const ANIMATION_FPS = 10;
 
 /** Vibration period, seconds of wall time per oscillation. */
-export const VIBRATION_PERIOD = 1;
+const VIBRATION_PERIOD = 1;
 
 /** Zoom limits, multiples of the fitted view. */
-export const MIN_ZOOM = 0.2;
-export const MAX_ZOOM = 20;
+const MIN_ZOOM = 0.2;
+const MAX_ZOOM = 20;
 
 /** Lines kept in the script-console history. */
-export const MAX_CONSOLE_LINES = 200;
+const MAX_CONSOLE_LINES = 200;
 
 export type Measurement = {
   /** 2 atoms: distance; 3: angle; 4: dihedral. */

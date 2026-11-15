@@ -6,8 +6,8 @@
  * four-character ID). Both serve CORS-enabled plain text.
  */
 
-export const PUBCHEM_SDF_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{name}/SDF?record_type=3d";
-export const RCSB_PDB_URL = "https://files.rcsb.org/download/{id}.pdb";
+const PUBCHEM_SDF_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{name}/SDF?record_type=3d";
+const RCSB_PDB_URL = "https://files.rcsb.org/download/{id}.pdb";
 
 export function pubChemUrl(name: string): string {
   return PUBCHEM_SDF_URL.replace("{name}", encodeURIComponent(name.trim()));

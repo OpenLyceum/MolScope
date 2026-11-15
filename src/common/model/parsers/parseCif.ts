@@ -34,7 +34,7 @@ function tokenize(line: string): string[] {
   return tokens;
 }
 
-export function readCif(text: string): CifBlock {
+function readCif(text: string): CifBlock {
   const items = new Map<string, string>();
   const loops: CifBlock["loops"] = [];
   const lines = text.split(/\r?\n/);
@@ -102,7 +102,7 @@ export function readCif(text: string): CifBlock {
 }
 
 /** "0.465(4)" → 0.465; "." and "?" → NaN. */
-export function cifNumber(value: string | undefined): number {
+function cifNumber(value: string | undefined): number {
   if (value === undefined || value === "." || value === "?") {
     return Number.NaN;
   }

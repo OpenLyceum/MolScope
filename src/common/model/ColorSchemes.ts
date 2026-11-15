@@ -74,7 +74,7 @@ const AMINO_COLORS: Record<string, number> = {
 const AMINO_DEFAULT = 0xbea06e;
 
 /** Jmol's colour names (a useful subset of the CSS names) plus the RasMol extras. */
-export const NAMED_COLORS: Record<string, number> = {
+const NAMED_COLORS: Record<string, number> = {
   black: 0x000000,
   white: 0xffffff,
   red: 0xff0000,
@@ -141,7 +141,7 @@ export function parseColor(text: string): number | null {
 }
 
 /** Linear blend between two 0xRRGGBB colours. */
-export function mixColors(c1: number, c2: number, t: number): number {
+function mixColors(c1: number, c2: number, t: number): number {
   const r = Math.round(((c1 >> 16) & 255) * (1 - t) + ((c2 >> 16) & 255) * t);
   const g = Math.round(((c1 >> 8) & 255) * (1 - t) + ((c2 >> 8) & 255) * t);
   const b = Math.round((c1 & 255) * (1 - t) + (c2 & 255) * t);
@@ -149,7 +149,7 @@ export function mixColors(c1: number, c2: number, t: number): number {
 }
 
 /** Jmol's "roygb" rainbow, t ∈ [0, 1] from red to blue. */
-export function rainbow(t: number): number {
+function rainbow(t: number): number {
   const stops = [0xff0000, 0xffa500, 0xffff00, 0x00ff00, 0x0000ff];
   const x = Math.min(0.9999, Math.max(0, t)) * (stops.length - 1);
   const i = Math.floor(x);
@@ -161,7 +161,7 @@ function temperatureColor(t: number): number {
   return t < 0.5 ? mixColors(0x0000ff, 0xffffff, t * 2) : mixColors(0xffffff, 0xff0000, (t - 0.5) * 2);
 }
 
-export function chainColor(chain: string): number {
+function chainColor(chain: string): number {
   if (!chain) {
     return 0xffffff;
   }

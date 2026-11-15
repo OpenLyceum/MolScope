@@ -39,7 +39,7 @@ export const ScriptMessageKey = {
   NO_STRUCTURE: "noStructure",
   LOAD_FAILED: "loadFailed",
 } as const;
-export type ScriptMessageKeyValue = (typeof ScriptMessageKey)[keyof typeof ScriptMessageKey];
+type ScriptMessageKeyValue = (typeof ScriptMessageKey)[keyof typeof ScriptMessageKey];
 
 export type ScriptMessage = {
   readonly key: ScriptMessageKeyValue;

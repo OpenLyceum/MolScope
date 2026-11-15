@@ -13,18 +13,18 @@ import { parseMol } from "./parseMol.js";
 import { parsePdb } from "./parsePdb.js";
 import { parseXyz } from "./parseXyz.js";
 
-export const StructureFormat = {
+const StructureFormat = {
   PDB: "pdb",
   MOL: "mol",
   XYZ: "xyz",
   CIF: "cif",
 } as const;
-export type StructureFormatValue = (typeof StructureFormat)[keyof typeof StructureFormat];
+type StructureFormatValue = (typeof StructureFormat)[keyof typeof StructureFormat];
 
 /** File extensions the open-file dialog accepts. */
 export const ACCEPTED_EXTENSIONS = [".pdb", ".ent", ".mol", ".sdf", ".mdl", ".xyz", ".cif"];
 
-export function detectFormat(text: string, fileName = ""): StructureFormatValue {
+function detectFormat(text: string, fileName = ""): StructureFormatValue {
   const ext = fileName.toLowerCase().split(".").pop() ?? "";
   if (ext === "pdb" || ext === "ent") {
     return StructureFormat.PDB;
