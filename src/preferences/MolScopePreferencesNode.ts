@@ -1,3 +1,4 @@
+import { MOL_SCOPE_PREFERENCES_NODE_SETTINGS } from "../MolScopeConstants.js";
 /**
  * MolScopePreferencesNode.ts
  *
@@ -23,27 +24,27 @@ export class MolScopePreferencesNode extends VBox {
     // colors (readable on white in both default and projector profiles), not textColorProperty
     // (which is near-white in default mode and would be invisible on the white dialog).
     const header = new Text(prefStrings.titleStringProperty, {
-      font: new PhetFont({ size: 18, weight: "bold" }),
+      font: new PhetFont({ size: MOL_SCOPE_PREFERENCES_NODE_SETTINGS.HEADER_FONT_SIZE, weight: "bold" }),
       fill: MolScopeColors.controlSurfaceTextColorProperty,
     });
 
     const perspectiveCheckbox = new Checkbox(
       preferencesModel.perspectiveProperty,
       new Text(prefStrings.perspectiveStringProperty, {
-        font: new PhetFont(14),
+        font: new PhetFont(MOL_SCOPE_PREFERENCES_NODE_SETTINGS.PERSPECTIVE_CHECKBOX_FONT_SIZE),
         fill: MolScopeColors.controlSurfaceTextColorProperty,
       }),
       {
         checkboxColor: MolScopeColors.controlSurfaceTextColorProperty,
         checkboxColorBackground: MolScopeColors.controlSurfaceColorProperty,
-        spacing: 8,
+        spacing: MOL_SCOPE_PREFERENCES_NODE_SETTINGS.PERSPECTIVE_CHECKBOX_SPACING,
         ...(tandem && { tandem: tandem.createTandem("perspectiveCheckbox") }),
       },
     );
 
     super({
       align: "left",
-      spacing: 12,
+      spacing: MOL_SCOPE_PREFERENCES_NODE_SETTINGS.CONSTRUCTOR_SPACING,
       children: [header, perspectiveCheckbox],
     });
   }

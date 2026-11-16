@@ -1,3 +1,4 @@
+import { STRUCTURE_BUILDER_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * StructureBuilder.ts
  *
@@ -252,7 +253,12 @@ function assignFromGeometry(atoms: Atom[], residues: readonly Residue[], positio
     if (sameChain(i, i + 3)) {
       const d3 = dist(i, i + 3);
       const d4 = i + 4 < ca.length && sameChain(i, i + 4) ? dist(i, i + 4) : 0;
-      if (d3 > 4.6 && d3 < 5.7 && d4 > 5.6 && d4 < 6.8) {
+      if (
+        d3 > STRUCTURE_BUILDER_SETTINGS.HELIX_I3_MIN_DISTANCE &&
+        d3 < STRUCTURE_BUILDER_SETTINGS.HELIX_I3_MAX_DISTANCE &&
+        d4 > STRUCTURE_BUILDER_SETTINGS.HELIX_I4_MIN_DISTANCE &&
+        d4 < STRUCTURE_BUILDER_SETTINGS.HELIX_I4_MAX_DISTANCE
+      ) {
         for (let k = i; k <= i + 3; k++) {
           kinds[k] = SecondaryStructure.HELIX;
         }
@@ -263,7 +269,10 @@ function assignFromGeometry(atoms: Atom[], residues: readonly Residue[], positio
     if (sameChain(i, i + 2) && kinds[i] === SecondaryStructure.NONE) {
       const d2 = dist(i, i + 2);
       const d4 = i + 4 < ca.length && sameChain(i, i + 4) ? dist(i, i + 4) : 0;
-      if (d2 > 6.3 && d4 > 12.4) {
+      if (
+        d2 > STRUCTURE_BUILDER_SETTINGS.SHEET_I2_MIN_DISTANCE &&
+        d4 > STRUCTURE_BUILDER_SETTINGS.SHEET_I4_MIN_DISTANCE
+      ) {
         for (let k = i; k <= i + 2; k++) {
           if (kinds[k] === SecondaryStructure.NONE) {
             kinds[k] = SecondaryStructure.SHEET;

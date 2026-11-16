@@ -1,3 +1,4 @@
+import { VIEWER_CONTROL_PANEL_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * ViewerControlPanel.ts
  *
@@ -244,8 +245,11 @@ export class ViewerControlPanel extends MolScopePanel {
           },
         ],
         {
-          spacing: 4,
-          radioButtonOptions: { radius: 6, selectedColor: MolScopeColors.accentColorProperty },
+          spacing: VIEWER_CONTROL_PANEL_SETTINGS.CELL_RADIO_SPACING,
+          radioButtonOptions: {
+            radius: VIEWER_CONTROL_PANEL_SETTINGS.CELL_RADIO_RADIUS,
+            selectedColor: MolScopeColors.accentColorProperty,
+          },
           accessibleName: controls.cellsStringProperty,
         },
       );
@@ -258,8 +262,11 @@ export class ViewerControlPanel extends MolScopePanel {
         ),
         new VBox({
           align: "left",
-          spacing: 4,
-          children: [label(controls.cellsStringProperty, 60), cellRadio],
+          spacing: VIEWER_CONTROL_PANEL_SETTINGS.CONSTRUCTOR_SPACING,
+          children: [
+            label(controls.cellsStringProperty, VIEWER_CONTROL_PANEL_SETTINGS.CELLS_LABEL_MAX_WIDTH),
+            cellRadio,
+          ],
         }),
       );
     } else {
@@ -290,8 +297,8 @@ export class ViewerControlPanel extends MolScopePanel {
       ...FLAT_RECTANGULAR_BUTTON_OPTIONS,
       arrowWidth: 10,
       arrowHeight: 10,
-      xMargin: 4,
-      yMargin: 4,
+      xMargin: VIEWER_CONTROL_PANEL_SETTINGS.ARROW_OPTIONS_X_MARGIN,
+      yMargin: VIEWER_CONTROL_PANEL_SETTINGS.ARROW_OPTIONS_Y_MARGIN,
     };
     const previousButton = new ArrowButton("left", () => model.setFrame("prev"), {
       ...arrowOptions,
@@ -302,10 +309,14 @@ export class ViewerControlPanel extends MolScopePanel {
       accessibleName: controls.nextFrameStringProperty,
     });
     const frameRow = new HBox({
-      spacing: 6,
+      spacing: VIEWER_CONTROL_PANEL_SETTINGS.FRAME_ROW_SPACING,
       children: [
         previousButton,
-        new Text(frameText, { font: CONTROL_FONT, fill: MolScopeColors.textColorProperty, maxWidth: 110 }),
+        new Text(frameText, {
+          font: CONTROL_FONT,
+          fill: MolScopeColors.textColorProperty,
+          maxWidth: VIEWER_CONTROL_PANEL_SETTINGS.FRAME_ROW_MAX_WIDTH,
+        }),
         nextButton,
       ],
     });
@@ -317,7 +328,7 @@ export class ViewerControlPanel extends MolScopePanel {
     );
     const animationBox = new VBox({
       align: "left",
-      spacing: 6,
+      spacing: VIEWER_CONTROL_PANEL_SETTINGS.ANIMATION_BOX_SPACING,
       children: [frameRow, pairRow(animateCheckbox, vibrateCheckbox, column)],
     });
     const visibilityLink = Multilink.multilink([hasFramesProperty, hasVibrationsProperty], (frames, vibrations) => {
@@ -332,7 +343,7 @@ export class ViewerControlPanel extends MolScopePanel {
     const separator = () => new HSeparator({ stroke: MolScopeColors.panelBorderColorProperty });
     const content = new VBox({
       align: "left",
-      spacing: 8,
+      spacing: VIEWER_CONTROL_PANEL_SETTINGS.CONTENT_SPACING,
       stretch: true,
       children: [
         heading(controls.structureStringProperty, inner),

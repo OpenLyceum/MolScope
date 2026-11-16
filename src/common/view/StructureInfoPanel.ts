@@ -1,3 +1,4 @@
+import { STRUCTURE_INFO_PANEL_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * StructureInfoPanel.ts
  *
@@ -29,7 +30,7 @@ import {
 } from "./formatters.js";
 
 /** Measurements listed before older ones scroll off. */
-const MAX_LISTED_MEASUREMENTS = 5;
+const MAX_LISTED_MEASUREMENTS: number = STRUCTURE_INFO_PANEL_SETTINGS.MAX_LISTED_MEASUREMENTS;
 
 const NEEDED_PICKS: Partial<Record<PickingModeValue, number>> = { distance: 2, angle: 3, torsion: 4 };
 
@@ -48,7 +49,7 @@ export class StructureInfoPanel extends MolScopePanel {
       font: heading(controls.structureStringProperty, inner).font,
       fill: MolScopeColors.textColorProperty,
       lineWrap: inner,
-      maxHeight: 80,
+      maxHeight: STRUCTURE_INFO_PANEL_SETTINGS.TITLE_TEXT_MAX_HEIGHT,
     });
     const detailsText = new RichText("", {
       font: CONTROL_FONT,
@@ -79,7 +80,7 @@ export class StructureInfoPanel extends MolScopePanel {
     const clearButton = pushButton(controls.clearMeasurementsStringProperty, () => model.clearMeasurements());
     // Every menu edits only the selection, so offer a way back to "all" (and an empty start for Select mode).
     const selectionButtons = new HBox({
-      spacing: 6,
+      spacing: STRUCTURE_INFO_PANEL_SETTINGS.SELECTION_BUTTONS_SPACING,
       justify: "left",
       children: [
         pushButton(controls.selectAllStringProperty, () => model.selectAll()),
@@ -199,7 +200,7 @@ export class StructureInfoPanel extends MolScopePanel {
 
     const measurementBox = new VBox({
       align: "left",
-      spacing: 4,
+      spacing: STRUCTURE_INFO_PANEL_SETTINGS.MEASUREMENT_BOX_SPACING,
       children: [heading(controls.measurementsStringProperty, inner), measurementText, clearButton],
     });
 
@@ -232,7 +233,7 @@ export class StructureInfoPanel extends MolScopePanel {
 
     const content = new VBox({
       align: "left",
-      spacing: 8,
+      spacing: STRUCTURE_INFO_PANEL_SETTINGS.CONTENT_SPACING,
       stretch: true,
       children: [
         titleText,

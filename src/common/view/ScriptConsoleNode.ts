@@ -1,3 +1,4 @@
+import { SCRIPT_CONSOLE_NODE_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * ScriptConsoleNode.ts
  *
@@ -18,9 +19,9 @@ import { disposeSubtree } from "./disposeSubtree.js";
 import { formatScriptMessage } from "./formatters.js";
 
 /** Output lines visible at once. */
-const VISIBLE_LINES = 4;
+const VISIBLE_LINES: number = SCRIPT_CONSOLE_NODE_SETTINGS.VISIBLE_LINES;
 /** Commands remembered for the up/down history. */
-const HISTORY_SIZE = 50;
+const HISTORY_SIZE: number = SCRIPT_CONSOLE_NODE_SETTINGS.HISTORY_SIZE;
 
 export class ScriptConsoleNode extends MolScopePanel {
   private readonly setValue: (value: string) => void;
@@ -103,7 +104,12 @@ export class ScriptConsoleNode extends MolScopePanel {
     const runButton = pushButton(controls.runStringProperty, run);
     const inputWidth = inner - runButton.width - 70;
 
-    const output = new RichText("", { font: SMALL_FONT, lineWrap: inner, leading: 2, maxHeight: 64 });
+    const output = new RichText("", {
+      font: SMALL_FONT,
+      lineWrap: inner,
+      leading: 2,
+      maxHeight: SCRIPT_CONSOLE_NODE_SETTINGS.OUTPUT_MAX_HEIGHT,
+    });
 
     const styleMultilink = Multilink.multilink(
       [
@@ -154,16 +160,23 @@ export class ScriptConsoleNode extends MolScopePanel {
 
     const content = new VBox({
       align: "left",
-      spacing: 4,
+      spacing: SCRIPT_CONSOLE_NODE_SETTINGS.CONTENT_SPACING,
       children: [
-        new HBox({ spacing: 8, children: [heading(controls.consoleStringProperty, 60), inputNode, runButton] }),
+        new HBox({
+          spacing: SCRIPT_CONSOLE_NODE_SETTINGS.CONTENT_ITEM_1_SPACING,
+          children: [
+            heading(controls.consoleStringProperty, SCRIPT_CONSOLE_NODE_SETTINGS.CONSOLE_HEADING_MAX_WIDTH),
+            inputNode,
+            runButton,
+          ],
+        }),
         output,
       ],
     });
     super(content, {
       minWidth: bounds.width,
       maxWidth: bounds.width,
-      yMargin: 6,
+      yMargin: SCRIPT_CONSOLE_NODE_SETTINGS.CONSTRUCTOR_Y_MARGIN,
       left: bounds.minX,
       top: bounds.minY,
     });

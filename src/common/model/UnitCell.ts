@@ -1,3 +1,4 @@
+import { UNIT_CELL_NUMERICS, UNIT_CELL_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * UnitCell.ts
  *
@@ -27,7 +28,7 @@ export type SymmetryOperator = {
 };
 
 /** Fractional-coordinate tolerance for deduplication and cell-face inclusion. */
-const FRACTIONAL_TOLERANCE = 0.01;
+const FRACTIONAL_TOLERANCE: number = UNIT_CELL_SETTINGS.FRACTIONAL_TOLERANCE;
 
 export class UnitCell {
   public readonly parameters: CellParameters;
@@ -233,7 +234,7 @@ function wrap01(v: number): number {
   if (w > 1 - FRACTIONAL_TOLERANCE) {
     w = 0;
   }
-  return Math.abs(w) < 1e-9 ? 0 : w;
+  return Math.abs(w) < UNIT_CELL_NUMERICS.WRAPPED_COORDINATE_TOLERANCE ? 0 : w;
 }
 
 /** Fractional points equal modulo lattice translations. */

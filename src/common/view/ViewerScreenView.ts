@@ -1,3 +1,4 @@
+import { VIEWER_SCREEN_VIEW_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * ViewerScreenView.ts
  *
@@ -28,10 +29,10 @@ import { StructureInfoPanel } from "./StructureInfoPanel.js";
 import { ViewerControlPanel } from "./ViewerControlPanel.js";
 
 /** Panel widths and console height, view px. */
-const LEFT_PANEL_WIDTH = 210;
-const RIGHT_PANEL_WIDTH = 236;
-const CONSOLE_HEIGHT = 96;
-const GAP = 8;
+const LEFT_PANEL_WIDTH: number = VIEWER_SCREEN_VIEW_SETTINGS.LEFT_PANEL_WIDTH;
+const RIGHT_PANEL_WIDTH: number = VIEWER_SCREEN_VIEW_SETTINGS.RIGHT_PANEL_WIDTH;
+const CONSOLE_HEIGHT: number = VIEWER_SCREEN_VIEW_SETTINGS.CONSOLE_HEIGHT;
+const GAP: number = VIEWER_SCREEN_VIEW_SETTINGS.GAP;
 
 export type ViewerScreenConfig = {
   readonly styles: readonly DisplayStyleValue[];

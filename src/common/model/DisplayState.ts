@@ -1,3 +1,4 @@
+import { DISPLAY_RADIUS_DEFAULTS, DISPLAY_STATE_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * DisplayState.ts
  *
@@ -20,10 +21,10 @@ import { ResidueKind } from "./Structure.js";
 export const WIREFRAME_LINE = -1;
 
 /** Jmol's default stick radius, Å (`wireframe 0.15`). */
-const STICK_RADIUS = 0.15;
+const STICK_RADIUS: number = DISPLAY_STATE_SETTINGS.STICK_RADIUS;
 
 /** Ball-and-stick ball size, fraction of the van der Waals radius (Jmol `spacefill 20%`). */
-const BALL_FRACTION = 0.2;
+const BALL_FRACTION: number = DISPLAY_STATE_SETTINGS.BALL_FRACTION;
 
 export const DisplayStyle = {
   WIREFRAME: "wireframe",
@@ -139,7 +140,9 @@ export class DisplayState {
   public setAtomRadius(value: number, percent: boolean): void {
     this.forSelected((i) => {
       const atom = this.structure.atoms[i];
-      this.atomRadius[i] = percent ? ((atom?.element.vdwRadius ?? 1.5) * value) / 100 : value;
+      this.atomRadius[i] = percent
+        ? ((atom?.element.vdwRadius ?? DISPLAY_RADIUS_DEFAULTS.FALLBACK_VDW_RADIUS) * value) / 100
+        : value;
     });
   }
 
@@ -200,7 +203,7 @@ export class DisplayState {
     const residues = this.structure.residues;
     this.forSelected((i) => {
       const atom = this.structure.atoms[i];
-      const vdw = atom?.element.vdwRadius ?? 1.5;
+      const vdw = atom?.element.vdwRadius ?? DISPLAY_RADIUS_DEFAULTS.FALLBACK_VDW_RADIUS;
       const kind = residues[atom?.residueIndex ?? -1]?.kind;
       const inPolymer = kind === ResidueKind.AMINO || kind === ResidueKind.NUCLEIC;
       this.cartoon[i] = 0;

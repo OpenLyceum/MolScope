@@ -1,3 +1,4 @@
+import { ATOM_RADIUS_DEFAULTS, VIEWER_MODEL_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * ViewerModel.ts
  *
@@ -33,20 +34,20 @@ import type { Bond, Frame, Structure } from "./Structure.js";
 import { validateFrames } from "./StructureValidation.js";
 
 /** Default spin rate, degrees per second (Jmol `spin on` uses 30). */
-const DEFAULT_SPIN_RATE = 30;
+const DEFAULT_SPIN_RATE: number = VIEWER_MODEL_SETTINGS.DEFAULT_SPIN_RATE;
 
 /** Frames per second for trajectory animation. */
-const ANIMATION_FPS = 10;
+const ANIMATION_FPS: number = VIEWER_MODEL_SETTINGS.ANIMATION_FPS;
 
 /** Vibration period, seconds of wall time per oscillation. */
 const VIBRATION_PERIOD = 1;
 
 /** Zoom limits, multiples of the fitted view. */
-const MIN_ZOOM = 0.2;
-const MAX_ZOOM = 20;
+const MIN_ZOOM: number = VIEWER_MODEL_SETTINGS.MIN_ZOOM;
+const MAX_ZOOM: number = VIEWER_MODEL_SETTINGS.MAX_ZOOM;
 
 /** Lines kept in the script-console history. */
-const MAX_CONSOLE_LINES = 200;
+const MAX_CONSOLE_LINES: number = VIEWER_MODEL_SETTINGS.MAX_CONSOLE_LINES;
 
 export type Measurement = {
   /** 2 atoms: distance; 3: angle; 4: dihedral. */
@@ -97,7 +98,7 @@ export class ViewerModel implements TModel, ScriptTarget {
   /** Rotation centre, Å. */
   public readonly centerProperty = new Property<Vec3>([0, 0, 0]);
   /** Bounding radius about the centre, Å — the camera fits this sphere at zoom 1. */
-  public readonly radiusProperty = new NumberProperty(5);
+  public readonly radiusProperty = new NumberProperty(VIEWER_MODEL_SETTINGS.RADIUS_DEFAULT);
   public readonly perspectiveProperty = new BooleanProperty(true);
   public readonly spinProperty = new BooleanProperty(false);
   public readonly spinRateProperty = new NumberProperty(DEFAULT_SPIN_RATE);
@@ -468,7 +469,7 @@ export class ViewerModel implements TModel, ScriptTarget {
           (p[3 * i + 1] ?? 0) - center[1],
           (p[3 * i + 2] ?? 0) - center[2],
         );
-        r = Math.max(r, d + (structure.atoms[i]?.element.vdwRadius ?? 1.5));
+        r = Math.max(r, d + (structure.atoms[i]?.element.vdwRadius ?? ATOM_RADIUS_DEFAULTS.FALLBACK_VDW_RADIUS));
       }
       this.radiusProperty.value = Math.max(r, 2);
     }

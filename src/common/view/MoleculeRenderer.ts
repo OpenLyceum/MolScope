@@ -1,3 +1,4 @@
+import { MOLECULE_RENDERER_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * MoleculeRenderer.ts
  *
@@ -27,15 +28,15 @@ import { CELL_EDGES } from "../model/UnitCell.js";
 import type { Measurement } from "../model/ViewerModel.js";
 
 /** Camera distance in units of the bounding radius (Jmol's default `cameraDepth` is 3). */
-const CAMERA_DEPTH = 3;
+const CAMERA_DEPTH: number = MOLECULE_RENDERER_SETTINGS.CAMERA_DEPTH;
 /** Sprite resolution for shaded spheres, px. */
-const SPRITE_SIZE = 128;
+const SPRITE_SIZE: number = MOLECULE_RENDERER_SETTINGS.SPRITE_SIZE;
 /** Sprites kept before the cache is flushed (continuous colour schemes create many). */
-const MAX_SPRITES = 512;
+const MAX_SPRITES: number = MOLECULE_RENDERER_SETTINGS.MAX_SPRITES;
 /** Thin wireframe line width, px. */
-const WIRE_WIDTH = 1.6;
+const WIRE_WIDTH: number = MOLECULE_RENDERER_SETTINGS.WIRE_WIDTH;
 /** Minimum pick radius, px, so thin wireframe atoms are still clickable. */
-const MIN_PICK_RADIUS = 6;
+const MIN_PICK_RADIUS: number = MOLECULE_RENDERER_SETTINGS.MIN_PICK_RADIUS;
 
 const Kind = {
   SPHERE: 0,
@@ -448,7 +449,7 @@ export class MoleculeRenderer {
         y1,
         x2: this.sx[target] ?? 0,
         y2: this.sy[target] ?? 0,
-        size: 2.4 * TUBE_RADIUS * this.scale,
+        size: MOLECULE_RENDERER_SETTINGS.ADD_NUCLEIC_RUNGS_SIZE_FACTOR * TUBE_RADIUS * this.scale,
         color: state.colors[residue.leadAtom] ?? 0xffffff,
       });
     }
@@ -618,7 +619,7 @@ export class MoleculeRenderer {
         case Kind.DASH:
           ctx.save();
           ctx.setLineDash([4, 4]);
-          ctx.lineWidth = 1.5;
+          ctx.lineWidth = MOLECULE_RENDERER_SETTINGS.LINE_WIDTH_LINE_WIDTH;
           ctx.strokeStyle = this.input?.colors.hydrogenBond ?? "";
           ctx.beginPath();
           ctx.moveTo(it.x1, it.y1);
@@ -646,7 +647,7 @@ export class MoleculeRenderer {
       return;
     }
     ctx.lineCap = "butt";
-    ctx.lineWidth = it.size * 0.7;
+    ctx.lineWidth = it.size * MOLECULE_RENDERER_SETTINGS.PAINT_CYLINDER_LINE_WIDTH_FACTOR;
     ctx.strokeStyle = this.css(it.color);
     ctx.stroke();
     if (it.size < 5) {
@@ -673,7 +674,7 @@ export class MoleculeRenderer {
   private paintUnitCell(ctx: CanvasRenderingContext2D, cell: UnitCell, input: RenderInput): void {
     const corners = cell.corners(input.cellRange).map((p) => this.projectPoint(p, input));
     ctx.save();
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = MOLECULE_RENDERER_SETTINGS.LINE_WIDTH_LINE_WIDTH;
     ctx.strokeStyle = input.colors.unitCell;
     ctx.beginPath();
     for (const [i, j] of CELL_EDGES) {
@@ -705,7 +706,7 @@ export class MoleculeRenderer {
     ctx.save();
     if (input.showHalos) {
       ctx.strokeStyle = colors.halo;
-      ctx.lineWidth = 3;
+      ctx.lineWidth = MOLECULE_RENDERER_SETTINGS.PAINT_OVERLAYS_LINE_WIDTH;
       for (let i = 0; i < n; i++) {
         if (state.selected[i] && this.pickable[i]) {
           this.ring(ctx, i, 3);
@@ -742,7 +743,7 @@ export class MoleculeRenderer {
     // Measurements: dashed polyline through the atoms, value at the middle.
     ctx.strokeStyle = colors.measurement;
     ctx.fillStyle = colors.measurement;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = MOLECULE_RENDERER_SETTINGS.LINE_WIDTH_LINE_WIDTH;
     ctx.textBaseline = "middle";
     for (const measurement of input.measurements) {
       const pts = measurement.atoms.map((i) => [this.sx[i] ?? 0, this.sy[i] ?? 0] as const);
@@ -794,7 +795,7 @@ export class MoleculeRenderer {
     });
     projected.sort((p, q) => p.z - q.z);
     ctx.save();
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = MOLECULE_RENDERER_SETTINGS.PAINT_AXES_LINE_WIDTH;
     ctx.lineCap = "round";
     ctx.font = input.font;
     ctx.textAlign = "center";

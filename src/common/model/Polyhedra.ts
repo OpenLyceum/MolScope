@@ -1,3 +1,4 @@
+import { POLYHEDRA_NUMERICS, POLYHEDRA_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * Polyhedra.ts
  *
@@ -21,8 +22,8 @@ export type Polyhedron = {
   readonly faces: readonly (readonly [number, number, number])[];
 };
 
-const MIN_COORDINATION = 4;
-const MAX_COORDINATION = 12;
+const MIN_COORDINATION: number = POLYHEDRA_SETTINGS.MIN_COORDINATION;
+const MAX_COORDINATION: number = POLYHEDRA_SETTINGS.MAX_COORDINATION;
 
 export function findPolyhedra(structure: Structure, positions: Float64Array): Polyhedron[] {
   const neighbors: number[][] = structure.atoms.map(() => []);
@@ -85,7 +86,7 @@ function convexHullFaces(points: readonly number[], p: Float64Array, center: num
   const get = (i: number) => [p[3 * i] ?? 0, p[3 * i + 1] ?? 0, p[3 * i + 2] ?? 0] as const;
   const c = get(center);
   const faces: [number, number, number][] = [];
-  const eps = 1e-3;
+  const eps: number = POLYHEDRA_NUMERICS.FACE_COPLANAR_TOLERANCE;
   for (let i = 0; i < points.length; i++) {
     for (let j = i + 1; j < points.length; j++) {
       for (let k = j + 1; k < points.length; k++) {

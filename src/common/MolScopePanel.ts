@@ -1,3 +1,4 @@
+import { MOL_SCOPE_PANEL_SETTINGS } from "../MolScopeConstants.js";
 /**
  * MolScopePanel.ts
  *
@@ -40,8 +41,8 @@ export class MolScopePanel extends Panel {
         fill: MolScopeColors.panelBackgroundColorProperty,
         stroke: MolScopeColors.panelBorderColorProperty,
         cornerRadius: PANEL_CORNER_RADIUS,
-        xMargin: 12,
-        yMargin: 10,
+        xMargin: MOL_SCOPE_PANEL_SETTINGS.OPTIONS_X_MARGIN,
+        yMargin: MOL_SCOPE_PANEL_SETTINGS.OPTIONS_Y_MARGIN,
       },
       providedOptions,
     );

@@ -1,3 +1,4 @@
+import { SCRIPT_ENGINE_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * ScriptEngine.ts
  *
@@ -275,7 +276,7 @@ export class ScriptEngine {
         if (first === "in") {
           this.target.zoomBy(1.25);
         } else if (first === "out") {
-          this.target.zoomBy(0.8);
+          this.target.zoomBy(SCRIPT_ENGINE_SETTINGS.ZOOM_OUT_FACTOR);
         } else if (first === "" || ON_WORDS.has(first)) {
           this.target.setZoomPercent(100);
         } else {
@@ -407,7 +408,7 @@ export class ScriptEngine {
     const rangeMatch = /\{\s*(\d+)\s+(\d+)\s+(\d+)\s*\}/.exec(rest);
     const range: Vec3 = rangeMatch
       ? ([Number(rangeMatch[1]), Number(rangeMatch[2]), Number(rangeMatch[3])].map((v) =>
-          Math.min(4, Math.max(1, v)),
+          Math.min(SCRIPT_ENGINE_SETTINGS.MAX_CELL_PACKING, Math.max(1, v)),
         ) as Vec3)
       : [1, 1, 1];
     const name = rest

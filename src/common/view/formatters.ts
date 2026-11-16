@@ -1,3 +1,4 @@
+import { FORMATTERS_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * formatters.ts
  *
@@ -15,7 +16,7 @@ import type { Structure } from "../model/Structure.js";
 import type { ViewerModel } from "../model/ViewerModel.js";
 
 /** Maximum characters of a file-supplied title shown in panels. */
-const MAX_TITLE_LENGTH = 90;
+const MAX_TITLE_LENGTH: number = FORMATTERS_SETTINGS.MAX_TITLE_LENGTH;
 
 /** The localised library name when the structure came from the library, else the file's own title. */
 export function structureDisplayName(model: ViewerModel): string {
@@ -55,8 +56,14 @@ export function formatAtomDescription(structure: Structure, index: number): stri
 /** Cartesian position of an atom, "(x, y, z) Å". */
 export function formatPosition(positions: Float64Array, index: number): string {
   return StringUtils.fillIn(StringManager.getInstance().getInfo().positionStringProperty.value, {
-    x: toFixed(positions[3 * index] ?? 0, 3),
-    y: toFixed(positions[3 * index + 1] ?? 0, 3),
+    x: toFixed(
+      positions[FORMATTERS_SETTINGS.FORMAT_POSITION_X_FACTOR * index] ?? 0,
+      FORMATTERS_SETTINGS.FORMAT_POSITION_X,
+    ),
+    y: toFixed(
+      positions[FORMATTERS_SETTINGS.FORMAT_POSITION_Y_FACTOR * index + 1] ?? 0,
+      FORMATTERS_SETTINGS.FORMAT_POSITION_Y,
+    ),
     z: toFixed(positions[3 * index + 2] ?? 0, 3),
   });
 }

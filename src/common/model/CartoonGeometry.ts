@@ -1,3 +1,4 @@
+import { CARTOON_GEOMETRY_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * CartoonGeometry.ts
  *
@@ -17,18 +18,18 @@ import type { Structure } from "./Structure.js";
 import { ResidueKind, SecondaryStructure } from "./Structure.js";
 
 /** Spline samples per residue interval. */
-const SAMPLES_PER_RESIDUE = 6;
+const SAMPLES_PER_RESIDUE: number = CARTOON_GEOMETRY_SETTINGS.SAMPLES_PER_RESIDUE;
 
 /** Ribbon half-widths, Å. */
-const HELIX_HALF_WIDTH = 1.25;
-const SHEET_HALF_WIDTH = 1.1;
-const ARROW_HALF_WIDTH = 1.8;
+const HELIX_HALF_WIDTH: number = CARTOON_GEOMETRY_SETTINGS.HELIX_HALF_WIDTH;
+const SHEET_HALF_WIDTH: number = CARTOON_GEOMETRY_SETTINGS.SHEET_HALF_WIDTH;
+const ARROW_HALF_WIDTH: number = CARTOON_GEOMETRY_SETTINGS.ARROW_HALF_WIDTH;
 /** Tube radius for coils, traces and nucleic backbones, Å. */
-export const TUBE_RADIUS = 0.3;
+export const TUBE_RADIUS: number = CARTOON_GEOMETRY_SETTINGS.TUBE_RADIUS;
 
 /** Largest lead-atom gap still drawn as connected, Å (Cα–Cα is 3.8, P–P about 7). */
-const MAX_PROTEIN_GAP = 4.5;
-const MAX_NUCLEIC_GAP = 8.5;
+const MAX_PROTEIN_GAP: number = CARTOON_GEOMETRY_SETTINGS.MAX_PROTEIN_GAP;
+const MAX_NUCLEIC_GAP: number = CARTOON_GEOMETRY_SETTINGS.MAX_NUCLEIC_GAP;
 
 export type PolymerPath = {
   /** Sample positions, xyz interleaved. */

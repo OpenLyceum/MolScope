@@ -1,3 +1,4 @@
+import { MOLECULE_VIEWER_NODE_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * MoleculeViewerNode.ts
  *
@@ -44,15 +45,15 @@ import { formatAtomDescription, formatMeasurement } from "./formatters.js";
 import { MoleculeRenderer, type OverlayColors } from "./MoleculeRenderer.js";
 
 /** Degrees of rotation per pixel of drag. */
-const DEGREES_PER_PIXEL = 0.5;
+const DEGREES_PER_PIXEL: number = MOLECULE_VIEWER_NODE_SETTINGS.DEGREES_PER_PIXEL;
 /** Degrees per arrow-key press. */
-const KEY_ROTATION = 10;
+const KEY_ROTATION: number = MOLECULE_VIEWER_NODE_SETTINGS.KEY_ROTATION;
 /** Pixels of movement below which a press-release counts as a click. */
-const CLICK_SLOP = 4;
+const CLICK_SLOP: number = MOLECULE_VIEWER_NODE_SETTINGS.CLICK_SLOP;
 /** Zoom factor per wheel notch / key press. */
-const ZOOM_STEP = 1.15;
-const LABEL_FONT = new PhetFont(12);
-const TOOLTIP_FONT = new PhetFont(12);
+const ZOOM_STEP: number = MOLECULE_VIEWER_NODE_SETTINGS.ZOOM_STEP;
+const LABEL_FONT = new PhetFont(MOLECULE_VIEWER_NODE_SETTINGS.LABEL_FONT_SIZE);
+const TOOLTIP_FONT = new PhetFont(MOLECULE_VIEWER_NODE_SETTINGS.TOOLTIP_FONT_SIZE);
 
 class MoleculeCanvasNode extends CanvasNode {
   public readonly moleculeRenderer = new MoleculeRenderer();
@@ -178,8 +179,8 @@ export class MoleculeViewerNode extends Node {
     const tooltipBackground = new Rectangle(0, 0, 1, 1, {
       fill: MolScopeColors.panelBackgroundColorProperty,
       stroke: MolScopeColors.panelBorderColorProperty,
-      cornerRadius: 4,
-      opacity: 0.92,
+      cornerRadius: MOLECULE_VIEWER_NODE_SETTINGS.TOOLTIP_BACKGROUND_CORNER_RADIUS,
+      opacity: MOLECULE_VIEWER_NODE_SETTINGS.TOOLTIP_BACKGROUND_OPACITY,
     });
     this.tooltip = new Node({ children: [tooltipBackground, this.tooltipText], visible: false, pickable: false });
     this.tooltipText.boundsProperty.link((b) => {

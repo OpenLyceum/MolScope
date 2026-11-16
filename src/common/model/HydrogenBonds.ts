@@ -1,3 +1,4 @@
+import { HYDROGEN_BONDS_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * HydrogenBonds.ts
  *
@@ -9,8 +10,8 @@
 
 import type { Bond, Structure } from "./Structure.js";
 
-export const HBOND_MIN_DISTANCE = 2.5; // Å
-export const HBOND_MAX_DISTANCE = 3.5; // Å
+export const HBOND_MIN_DISTANCE: number = HYDROGEN_BONDS_SETTINGS.HBOND_MIN_DISTANCE; // Å
+export const HBOND_MAX_DISTANCE: number = HYDROGEN_BONDS_SETTINGS.HBOND_MAX_DISTANCE; // Å
 
 export function findHydrogenBonds(structure: Structure, positions: Float64Array): Bond[] {
   const polar: number[] = [];

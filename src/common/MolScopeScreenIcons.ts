@@ -1,3 +1,4 @@
+import { MOL_SCOPE_SCREEN_ICONS_SETTINGS } from "../MolScopeConstants.js";
 /**
  * MolScopeScreenIcons.ts
  *
@@ -45,7 +46,13 @@ function sphere(symbol: string, diameter: number, x: number, y: number): ShadedS
   return new ShadedSphereNode(diameter, { mainColor: atomColor(symbol), centerX: x, centerY: y });
 }
 
-function stick(x1: number, y1: number, x2: number, y2: number, width = 26): Line {
+function stick(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  width: number = MOL_SCOPE_SCREEN_ICONS_SETTINGS.DEFAULT_WIDTH,
+): Line {
   return new Line(x1, y1, x2, y2, { stroke: MolScopeColors.unitCellColorProperty, lineWidth: width, lineCap: "round" });
 }
 
@@ -106,13 +113,13 @@ export function createBiomoleculesIcon(): ScreenIcon {
   const arrowY = H - 70;
   const arrow = new Path(
     new Shape()
-      .moveTo(70, arrowY - 22)
-      .lineTo(380, arrowY - 22)
-      .lineTo(380, arrowY - 48)
-      .lineTo(470, arrowY)
-      .lineTo(380, arrowY + 48)
-      .lineTo(380, arrowY + 22)
-      .lineTo(70, arrowY + 22)
+      .moveTo(MOL_SCOPE_SCREEN_ICONS_SETTINGS.ARROW_X, arrowY - 22)
+      .lineTo(MOL_SCOPE_SCREEN_ICONS_SETTINGS.ARROW_X_SEGMENT_2, arrowY - 22)
+      .lineTo(MOL_SCOPE_SCREEN_ICONS_SETTINGS.ARROW_X_SEGMENT_2, arrowY - 48)
+      .lineTo(MOL_SCOPE_SCREEN_ICONS_SETTINGS.ARROW_X_SEGMENT_3, arrowY)
+      .lineTo(MOL_SCOPE_SCREEN_ICONS_SETTINGS.ARROW_X_SEGMENT_4, arrowY + 48)
+      .lineTo(MOL_SCOPE_SCREEN_ICONS_SETTINGS.ARROW_X_SEGMENT_4, arrowY + 22)
+      .lineTo(MOL_SCOPE_SCREEN_ICONS_SETTINGS.ARROW_X, arrowY + 22)
       .close(),
     { fill: SHEET_COLOR },
   );
@@ -146,7 +153,7 @@ export function createCrystalsIcon(): ScreenIcon {
         ] as const) {
           if (a <= 2 && b <= 2 && c <= 2 && [a, b, c].filter((v) => v === 1).length <= 1) {
             const [x2 = 0, y2 = 0] = point(a, b, c);
-            lines.addChild(stick(x, y, x2, y2, 10));
+            lines.addChild(stick(x, y, x2, y2, MOL_SCOPE_SCREEN_ICONS_SETTINGS.CREATE_CRYSTALS_ICON_WIDTH));
           }
         }
       }

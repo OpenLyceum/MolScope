@@ -1,3 +1,4 @@
+import { GEOMETRY_NUMERICS } from "../../MolScopeConstants.js";
 /**
  * Geometry.ts
  *
@@ -26,7 +27,7 @@ function length(a: Vec3): number {
 
 export function normalize(a: Vec3): Vec3 {
   const l = length(a);
-  return l > 1e-12 ? [a[0] / l, a[1] / l, a[2] / l] : [0, 0, 0];
+  return l > GEOMETRY_NUMERICS.MIN_VECTOR_LENGTH ? [a[0] / l, a[1] / l, a[2] / l] : [0, 0, 0];
 }
 
 export function distance(a: Vec3, b: Vec3): number {
