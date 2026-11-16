@@ -47,16 +47,16 @@ export const MOL_SCOPE_CONTROL_OPTIONS_SETTINGS = {
   NUMBER_CONTROL_SLIDER_TRACK_SIZE_HEIGHT: 3,
   /** Checkbox box width (px). */
   CHECKBOX_BOX_WIDTH: 16,
-  /** Mol scope number control options scale (dimensionless). */
-  MOL_SCOPE_NUMBER_CONTROL_OPTIONS_SCALE: 0.75,
-  /** Mol scope number control options slider padding (px). */
-  MOL_SCOPE_NUMBER_CONTROL_OPTIONS_SLIDER_PADDING: 4,
-  /** Mol scope number control options arrow button spacing (px). */
-  MOL_SCOPE_NUMBER_CONTROL_OPTIONS_ARROW_BUTTON_SPACING: 3,
-  /** Mol scope number control options vertical spacing (px). */
-  MOL_SCOPE_NUMBER_CONTROL_OPTIONS_VERTICAL_SPACING: 4,
-  /** Mol scope checkbox options spacing (px). */
-  MOL_SCOPE_CHECKBOX_OPTIONS_SPACING: 4,
+  /** NumberControl arrow-button scale (dimensionless). */
+  NUMBER_CONTROL_SCALE: 0.75,
+  /** NumberControl layout slider padding (px). */
+  NUMBER_CONTROL_SLIDER_PADDING: 4,
+  /** NumberControl layout arrow-button spacing (px). */
+  NUMBER_CONTROL_ARROW_BUTTON_SPACING: 3,
+  /** NumberControl layout vertical spacing (px). */
+  NUMBER_CONTROL_VERTICAL_SPACING: 4,
+  /** Checkbox label spacing (px). */
+  CHECKBOX_SPACING: 4,
 } as const;
 
 /** Settings for common/MolScopePanel.ts. */
@@ -200,8 +200,8 @@ export const MOLECULE_RENDERER_SETTINGS = {
   WIRE_WIDTH: 1.6,
   /** Minimum pick radius, px, so thin wireframe atoms are still clickable. */
   MIN_PICK_RADIUS: 6,
-  /** Line width line width (px). */
-  LINE_WIDTH_LINE_WIDTH: 1.5,
+  /** Cartoon / polyhedra stroke width (px). */
+  LINE_WIDTH: 1.5,
 } as const;
 
 /** Settings for common/view/MoleculeViewerNode.ts. */
@@ -293,10 +293,10 @@ export const VIEWER_SCREEN_VIEW_SETTINGS = {
 
 /** Settings for common/view/formatters.ts. */
 export const FORMATTERS_SETTINGS = {
-  FORMAT_POSITION_X_FACTOR: 3, // dimensionless
-  FORMAT_POSITION_X: 3, // px
-  FORMAT_POSITION_Y_FACTOR: 3, // dimensionless
-  FORMAT_POSITION_Y: 3, // px
+  /** Stride through the packed xyz `Float64Array` (components per atom). */
+  POSITION_STRIDE: 3,
+  /** `toFixed` fraction digits for each cartesian coordinate. */
+  POSITION_DIGITS: 3,
 
   /** Maximum characters of a file-supplied title shown in panels. */
   MAX_TITLE_LENGTH: 90,
@@ -350,13 +350,13 @@ export const STRUCTURE_BUILDER_SETTINGS = {
 
 /** Settings for common/model/ViewerModel.ts; units are documented per value. */
 export const ATOM_RADIUS_DEFAULTS = {
-  /** Fallback van der Waals radius for a missing atom (Å). */
+  /** Fallback van der Waals radius for a missing atom (Å). Same value as {@link DISPLAY_RADIUS_DEFAULTS.FALLBACK_VDW_RADIUS}. */
   FALLBACK_VDW_RADIUS: 1.5,
 } as const;
 
 /** Settings for common/model/DisplayState.ts; units are documented per value. */
 export const DISPLAY_RADIUS_DEFAULTS = {
-  /** Fallback van der Waals radius for a missing atom (Å). */
+  /** Fallback van der Waals radius for a missing atom (Å). Same value as {@link ATOM_RADIUS_DEFAULTS.FALLBACK_VDW_RADIUS}. */
   FALLBACK_VDW_RADIUS: 1.5,
 } as const;
 

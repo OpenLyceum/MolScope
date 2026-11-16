@@ -619,7 +619,7 @@ export class MoleculeRenderer {
         case Kind.DASH:
           ctx.save();
           ctx.setLineDash([4, 4]);
-          ctx.lineWidth = MOLECULE_RENDERER_SETTINGS.LINE_WIDTH_LINE_WIDTH;
+          ctx.lineWidth = MOLECULE_RENDERER_SETTINGS.LINE_WIDTH;
           ctx.strokeStyle = this.input?.colors.hydrogenBond ?? "";
           ctx.beginPath();
           ctx.moveTo(it.x1, it.y1);
@@ -674,7 +674,7 @@ export class MoleculeRenderer {
   private paintUnitCell(ctx: CanvasRenderingContext2D, cell: UnitCell, input: RenderInput): void {
     const corners = cell.corners(input.cellRange).map((p) => this.projectPoint(p, input));
     ctx.save();
-    ctx.lineWidth = MOLECULE_RENDERER_SETTINGS.LINE_WIDTH_LINE_WIDTH;
+    ctx.lineWidth = MOLECULE_RENDERER_SETTINGS.LINE_WIDTH;
     ctx.strokeStyle = input.colors.unitCell;
     ctx.beginPath();
     for (const [i, j] of CELL_EDGES) {
@@ -743,7 +743,7 @@ export class MoleculeRenderer {
     // Measurements: dashed polyline through the atoms, value at the middle.
     ctx.strokeStyle = colors.measurement;
     ctx.fillStyle = colors.measurement;
-    ctx.lineWidth = MOLECULE_RENDERER_SETTINGS.LINE_WIDTH_LINE_WIDTH;
+    ctx.lineWidth = MOLECULE_RENDERER_SETTINGS.LINE_WIDTH;
     ctx.textBaseline = "middle";
     for (const measurement of input.measurements) {
       const pts = measurement.atoms.map((i) => [this.sx[i] ?? 0, this.sy[i] ?? 0] as const);

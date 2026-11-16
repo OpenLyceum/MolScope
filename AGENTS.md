@@ -43,7 +43,7 @@ the same `ViewerModel` operations, which edit those arrays for the selected atom
 | File | Purpose |
 |---|---|
 | `src/MolScopeColors.ts` | Profile colours for chrome and viewer overlays (labels, measurements, cell, halos, console) |
-| `src/MolScopeConstants.ts` | Layout constants |
+| `src/MolScopeConstants.ts` | Layout, chrome, and model numeric constants |
 | `src/i18n/StringManager.ts` | Localised strings: controls, styles, schemes, hints, script messages, library names |
 | **Pure model** (`src/common/model/`) | **no Scenery imports except `ViewerModel` (axon only); unit-tested** |
 | `Elements.ts` | Element table: Jmol CPK colours, covalent/vdW radii, masses, electronegativities |
