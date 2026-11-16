@@ -88,6 +88,7 @@ export class StructureInfoPanel extends MolScopePanel {
       ],
     });
 
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one summary line per structure property; refactor candidate (see AGENTS.md)
     const updateSummary = () => {
       const structure = model.structure;
       const state = model.displayState;

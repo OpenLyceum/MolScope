@@ -111,7 +111,7 @@ export type RenderInput = {
 };
 
 export class MoleculeRenderer {
-  private items: Item[] = [];
+  private readonly items: Item[] = [];
   private itemCount = 0;
   private order: number[] = [];
   private readonly sprites = new Map<number, HTMLCanvasElement>();
@@ -281,6 +281,7 @@ export class MoleculeRenderer {
     }
   }
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one canvas pass with a branch per bond style; refactor candidate (see AGENTS.md)
   private addBond(bond: Bond, input: RenderInput): void {
     const { state } = input;
     const { a, b } = bond;
@@ -342,6 +343,7 @@ export class MoleculeRenderer {
     }
   }
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one canvas pass with a branch per polymer style; refactor candidate (see AGENTS.md)
   private addPolymers(input: RenderInput): void {
     const { state } = input;
     const structure = state.structure;
@@ -417,6 +419,7 @@ export class MoleculeRenderer {
   }
 
   /** Base "ladder rungs" from the backbone to N1 (purines) or N3 (pyrimidines), as in Jmol cartoons. */
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one canvas pass over the nucleic-acid rungs; refactor candidate (see AGENTS.md)
   private addNucleicRungs(path: PolymerPath, projected: Float64Array, input: RenderInput): void {
     const { state } = input;
     const structure = state.structure;
@@ -506,6 +509,7 @@ export class MoleculeRenderer {
     }
   }
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one canvas pass with a branch per polyhedron face; refactor candidate (see AGENTS.md)
   private addPolyhedra(polyhedra: readonly Polyhedron[], input: RenderInput): void {
     const { state, positions, rotation } = input;
     const v1: Vec3 = [0, 0, 0];
@@ -564,7 +568,7 @@ export class MoleculeRenderer {
       }
       switch (it.kind) {
         case Kind.SPHERE:
-          if (it.size < 0.75) {
+          if (it.size === 0) {
             ctx.fillStyle = this.css(it.color);
             ctx.fillRect(it.x1 - 0.75, it.y1 - 0.75, 1.5, 1.5);
           } else {
@@ -700,6 +704,7 @@ export class MoleculeRenderer {
     ctx.restore();
   }
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one canvas pass draws every overlay type; refactor candidate (see AGENTS.md)
   private paintOverlays(ctx: CanvasRenderingContext2D, input: RenderInput): void {
     const { state, colors } = input;
     const n = state.atomCount;

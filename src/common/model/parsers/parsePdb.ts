@@ -14,6 +14,7 @@ import { buildStructure } from "../StructureBuilder.js";
 import { UnitCell } from "../UnitCell.js";
 import { makeAtom, parseCoordinate, StructureParseError } from "./makeAtom.js";
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: line-oriented PDB parser, one branch per record type; refactor candidate (see AGENTS.md)
 export function parsePdb(text: string, fallbackTitle: string): Structure {
   const lines = text.split(/\r?\n/);
   const atoms: Atom[] = [];

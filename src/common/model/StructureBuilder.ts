@@ -153,9 +153,10 @@ function residueKind(name: string): ResidueKindValue {
 function buildResidues(atoms: Atom[]): Residue[] {
   const residues: Residue[] = [];
   let start = 0;
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: closes a residue with its per-kind bookkeeping in one place; refactor candidate (see AGENTS.md)
   const finish = (end: number) => {
     const first = atoms[start];
-    if (!(first && first.residueName)) {
+    if (!first?.residueName) {
       return;
     }
     const kind = residueKind(first.residueName);
@@ -236,6 +237,7 @@ function applyRanges(atoms: Atom[], residues: readonly Residue[], ranges: readon
  * `calculate structure` for files with no HELIX/SHEET records): an α-helix packs
  * Cα(i)–Cα(i+3) at about 5.0–5.6 Å, a β-strand stretches Cα(i)–Cα(i+2) to 6.4–7.0 Å.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: secondary-structure assignment from backbone geometry; refactor candidate (see AGENTS.md)
 function assignFromGeometry(atoms: Atom[], residues: readonly Residue[], positions: Float64Array): void {
   const ca = residues.filter((r) => r.kind === ResidueKind.AMINO && r.leadAtom >= 0);
   const dist = (i: number, j: number) => {

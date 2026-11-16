@@ -1,3 +1,4 @@
+import { toFixed } from "scenerystack/dot";
 import { DISPLAY_RADIUS_DEFAULTS, DISPLAY_STATE_SETTINGS } from "../../MolScopeConstants.js";
 /**
  * DisplayState.ts
@@ -281,9 +282,9 @@ function formatLabel(structure: Structure, index: number, format: string): strin
       case "c":
         return atom.chain;
       case "b":
-        return atom.bFactor.toFixed(2);
+        return toFixed(atom.bFactor, 2);
       case "q":
-        return atom.occupancy.toFixed(2);
+        return toFixed(atom.occupancy, 2);
       default:
         return "%";
     }

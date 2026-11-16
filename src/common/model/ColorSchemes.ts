@@ -207,6 +207,7 @@ export function applyColorScheme(
     }
   }
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one branch per color scheme for each atom; refactor candidate (see AGENTS.md)
   atoms.forEach((atom, i) => {
     if (!mask[i]) {
       return;

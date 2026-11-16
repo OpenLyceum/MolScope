@@ -13,6 +13,7 @@ import type { Bond, Structure } from "./Structure.js";
 export const HBOND_MIN_DISTANCE: number = HYDROGEN_BONDS_SETTINGS.HBOND_MIN_DISTANCE; // Å
 export const HBOND_MAX_DISTANCE: number = HYDROGEN_BONDS_SETTINGS.HBOND_MAX_DISTANCE; // Å
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: donor/acceptor geometry tests kept as one tight loop; refactor candidate (see AGENTS.md)
 export function findHydrogenBonds(structure: Structure, positions: Float64Array): Bond[] {
   const polar: number[] = [];
   structure.atoms.forEach((atom, i) => {

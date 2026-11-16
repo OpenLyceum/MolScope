@@ -112,6 +112,7 @@ export const CELL_EDGES: readonly (readonly [number, number])[] = [
  * Parses one symmetry operator such as "x,y,z", "-y, x-y, z+1/3" or "1/2+x,-y,z".
  * Returns null on anything it does not understand.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: hand-written parser for x,y,z symmetry operators; refactor candidate (see AGENTS.md)
 export function parseSymmetryOperator(text: string): SymmetryOperator | null {
   const parts = text
     .replace(/['"\s]/g, "")
@@ -186,6 +187,7 @@ export type CellSite<T> = {
  * duplicates, and replicates over `range` cells — including atoms that sit exactly
  * on the far faces, so a 1×1×1 NaCl cell shows all 27 sites like Jmol's `packed`.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: applies symmetry operators and de-duplicates images in one pass; refactor candidate (see AGENTS.md)
 export function packCell<T>(
   sites: readonly CellSite<T>[],
   operators: readonly SymmetryOperator[],

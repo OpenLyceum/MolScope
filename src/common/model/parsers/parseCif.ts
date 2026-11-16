@@ -34,6 +34,7 @@ function tokenize(line: string): string[] {
   return tokens;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: line-oriented CIF tokenizer, one branch per record type; refactor candidate (see AGENTS.md)
 function readCif(text: string): CifBlock {
   const items = new Map<string, string>();
   const loops: CifBlock["loops"] = [];

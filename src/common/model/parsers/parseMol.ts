@@ -16,6 +16,7 @@ import { makeAtom, parseCoordinate, StructureParseError } from "./makeAtom.js";
 /** V2000 charge codes: 1 = +3, 2 = +2, 3 = +1, 5 = −1, 6 = −2, 7 = −3. */
 const CHARGE_CODES: Record<string, number> = { "1": 3, "2": 2, "3": 1, "5": -1, "6": -2, "7": -3 };
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: line-oriented MOL parser, one branch per block; refactor candidate (see AGENTS.md)
 export function parseMol(text: string, fallbackTitle: string): Structure {
   const records = text.split(/^\$\$\$\$\s*$/m).filter((r) => r.trim().length > 0);
   let atoms: Atom[] = [];

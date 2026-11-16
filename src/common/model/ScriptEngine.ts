@@ -231,6 +231,7 @@ export class ScriptEngine {
     return messages;
   }
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: command dispatcher with one branch per script command; refactor candidate (see AGENTS.md)
   private execute(command: string): ScriptMessage[] | Promise<ScriptMessage[]> {
     const [head = "", ...restTokens] = command.split(/\s+/);
     const verb = head.toLowerCase();

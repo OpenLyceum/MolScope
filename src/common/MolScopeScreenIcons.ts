@@ -126,6 +126,7 @@ export function createBiomoleculesIcon(): ScreenIcon {
   return iconFrom(new Node({ children: [background(), helix, arrow] }));
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: draws the whole crystals icon in one pass; refactor candidate (see AGENTS.md)
 export function createCrystalsIcon(): ScreenIcon {
   // Rock salt: an oblique cube with alternating Na and Cl at the corners and edge midpoints.
   const s = 230;

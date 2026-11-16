@@ -85,6 +85,7 @@ export function buildPolymerPaths(structure: Structure, positions: Float64Array)
   return paths;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one pass builds the backbone spline for a residue run; refactor candidate (see AGENTS.md)
 function buildPath(structure: Structure, run: readonly number[], pos: (atom: number) => Vec3): PolymerPath {
   const residues = structure.residues;
   const isNucleic = residues[run[0] ?? 0]?.kind === ResidueKind.NUCLEIC;

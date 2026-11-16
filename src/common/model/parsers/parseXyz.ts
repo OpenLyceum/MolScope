@@ -13,6 +13,7 @@ import { buildStructure } from "../StructureBuilder.js";
 import { framesCompatible } from "./frameCompatibility.js";
 import { makeAtom, parseCoordinate, StructureParseError } from "./makeAtom.js";
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: line-oriented XYZ parser with format validation; refactor candidate (see AGENTS.md)
 export function parseXyz(text: string, fallbackTitle: string): Structure {
   const lines = text.split(/\r?\n/);
   const frames: Frame[] = [];

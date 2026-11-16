@@ -28,6 +28,7 @@ export type BondPerceptionOptions = {
   readonly skipLikePairs?: boolean;
 };
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: spatial-grid bond search kept as one tight loop; refactor candidate (see AGENTS.md)
 export function perceiveBonds(
   atoms: readonly Atom[],
   positions: Float64Array,

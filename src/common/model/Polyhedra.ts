@@ -82,6 +82,7 @@ export function findPolyhedra(structure: Structure, positions: Float64Array): Po
 }
 
 /** Brute-force hull of ≤ 12 points: a triangle is a face if every other point lies on one side. */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: incremental convex-hull algorithm; refactor candidate (see AGENTS.md)
 function convexHullFaces(points: readonly number[], p: Float64Array, center: number): [number, number, number][] {
   const get = (i: number) => [p[3 * i] ?? 0, p[3 * i + 1] ?? 0, p[3 * i + 2] ?? 0] as const;
   const c = get(center);
