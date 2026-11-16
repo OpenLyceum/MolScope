@@ -91,12 +91,6 @@ the same `ViewerModel` operations, which edit those arrays for the selected atom
   colours at run time (no literal colours).
 - **`src/common/model/library/data/`** holds third-party structure files (see `CREDITS.md`); they
   are not linted and must keep their original attribution.
-- **`noExcessiveCognitiveComplexity` suppressions (21 functions).** The file parsers, bond and
-  hydrogen-bond perception, the convex hull, the script dispatcher and the `MoleculeRenderer`
-  canvas passes each carry a `biome-ignore` with a reason. The suppressions went in when lint
-  began failing on warnings (2026-11-16). They are refactor candidates, not approved designs:
-  split one when you next change it, and remove its suppression. Don't add new ones.
-
 ### Template-owned files (drift-checked)
 
 `Baton/scripts/check-template-drift.sh MolScope` compares template-owned infrastructure. The CSP

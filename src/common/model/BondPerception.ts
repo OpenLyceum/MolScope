@@ -28,7 +28,6 @@ export type BondPerceptionOptions = {
   readonly skipLikePairs?: boolean;
 };
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: spatial-grid bond search kept as one tight loop; refactor candidate (see AGENTS.md)
 export function perceiveBonds(
   atoms: readonly Atom[],
   positions: Float64Array,
@@ -72,45 +71,100 @@ export function perceiveBonds(
     if (!atomA) {
       continue;
     }
-    const [i, j, k] = cellOf(a);
-    const ax = positions[3 * a] ?? 0;
-    const ay = positions[3 * a + 1] ?? 0;
-    const az = positions[3 * a + 2] ?? 0;
-    for (let di = -1; di <= 1; di++) {
-      for (let dj = -1; dj <= 1; dj++) {
-        for (let dk = -1; dk <= 1; dk++) {
-          const bucket = grid.get(keyOf(i + di, j + dj, k + dk));
-          if (!bucket) {
-            continue;
-          }
-          for (const b of bucket) {
-            if (b <= a) {
-              continue;
-            }
-            const atomB = atoms[b];
-            if (
-              !atomB ||
-              (skipLike && atomA.element === atomB.element) ||
-              (skipCations && isCation(atomA) && isCation(atomB))
-            ) {
-              continue;
-            }
-            const dx = (positions[3 * b] ?? 0) - ax;
-            const dy = (positions[3 * b + 1] ?? 0) - ay;
-            const dz = (positions[3 * b + 2] ?? 0) - az;
-            const d2 = dx * dx + dy * dy + dz * dz;
-            const cutoff = atomA.element.covalentRadius + atomB.element.covalentRadius + BOND_TOLERANCE;
-            if (d2 < cutoff * cutoff && d2 > MIN_BOND_DISTANCE * MIN_BOND_DISTANCE) {
-              // Hydrogens bond to at most their nearest heavy partner; skip H–H unless H2.
-              if (atomA.element.number === 1 && atomB.element.number === 1 && n > 2) {
-                continue;
-              }
-              bonds.push({ a, b, order: 1 });
-            }
-          }
+    collectBondsFromNeighbors(
+      a,
+      atomA,
+      atoms,
+      positions,
+      n,
+      cellOf(a),
+      keyOf,
+      grid,
+      skipLike,
+      skipCations,
+      isCation,
+      bonds,
+    );
+  }
+  return bonds;
+}
+
+function collectBondsFromNeighbors(
+  a: number,
+  atomA: Atom,
+  atoms: readonly Atom[],
+  positions: Float64Array,
+  n: number,
+  cell: readonly [number, number, number],
+  keyOf: (i: number, j: number, k: number) => string,
+  grid: Map<string, number[]>,
+  skipLike: boolean,
+  skipCations: boolean,
+  isCation: (atom: Atom) => boolean,
+  bonds: Bond[],
+): void {
+  const [i, j, k] = cell;
+  const ax = positions[3 * a] ?? 0;
+  const ay = positions[3 * a + 1] ?? 0;
+  const az = positions[3 * a + 2] ?? 0;
+  for (let di = -1; di <= 1; di++) {
+    for (let dj = -1; dj <= 1; dj++) {
+      for (let dk = -1; dk <= 1; dk++) {
+        const bucket = grid.get(keyOf(i + di, j + dj, k + dk));
+        if (!bucket) {
+          continue;
+        }
+        for (const b of bucket) {
+          maybeAddBond(a, b, atomA, atoms, positions, ax, ay, az, n, skipLike, skipCations, isCation, bonds);
         }
       }
     }
   }
-  return bonds;
+}
+
+function maybeAddBond(
+  a: number,
+  b: number,
+  atomA: Atom,
+  atoms: readonly Atom[],
+  positions: Float64Array,
+  ax: number,
+  ay: number,
+  az: number,
+  n: number,
+  skipLike: boolean,
+  skipCations: boolean,
+  isCation: (atom: Atom) => boolean,
+  bonds: Bond[],
+): void {
+  if (b <= a) {
+    return;
+  }
+  const atomB = atoms[b];
+  if (!atomB || shouldSkipPair(atomA, atomB, skipLike, skipCations, isCation)) {
+    return;
+  }
+  const dx = (positions[3 * b] ?? 0) - ax;
+  const dy = (positions[3 * b + 1] ?? 0) - ay;
+  const dz = (positions[3 * b + 2] ?? 0) - az;
+  const d2 = dx * dx + dy * dy + dz * dz;
+  const cutoff = atomA.element.covalentRadius + atomB.element.covalentRadius + BOND_TOLERANCE;
+  if (d2 >= cutoff * cutoff || d2 <= MIN_BOND_DISTANCE * MIN_BOND_DISTANCE) {
+    return;
+  }
+  // Hydrogens bond to at most their nearest heavy partner; skip H–H unless H2.
+  if (atomA.element.number === 1 && atomB.element.number === 1 && n > 2) {
+    return;
+  }
+  bonds.push({ a, b, order: 1 });
+}
+
+function shouldSkipPair(
+  atomA: Atom,
+  atomB: Atom,
+  skipLike: boolean,
+  skipCations: boolean,
+  isCation: (atom: Atom) => boolean,
+): boolean {
+  return (skipLike && atomA.element === atomB.element) || (skipCations && isCation(atomA) && isCation(atomB));
 }

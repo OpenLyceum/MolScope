@@ -112,7 +112,6 @@ export const CELL_EDGES: readonly (readonly [number, number])[] = [
  * Parses one symmetry operator such as "x,y,z", "-y, x-y, z+1/3" or "1/2+x,-y,z".
  * Returns null on anything it does not understand.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: hand-written parser for x,y,z symmetry operators; refactor candidate (see AGENTS.md)
 export function parseSymmetryOperator(text: string): SymmetryOperator | null {
   const parts = text
     .replace(/['"\s]/g, "")
@@ -124,37 +123,55 @@ export function parseSymmetryOperator(text: string): SymmetryOperator | null {
   const rotation: number[] = [];
   const translation: Vec3 = [0, 0, 0];
   for (let row = 0; row < 3; row++) {
-    const expr = parts[row] ?? "";
-    const coefficients = [0, 0, 0];
-    let constant = 0;
-    const terms = expr.match(/[+-]?[^+-]+/g);
-    if (!terms) {
+    const parsed = parseOperatorRow(parts[row] ?? "");
+    if (!parsed) {
       return null;
     }
-    for (const term of terms) {
-      const sign = term.startsWith("-") ? -1 : 1;
-      const body = term.replace(/^[+-]/, "");
-      const axis = body.search(/[xyz]/);
-      if (axis >= 0) {
-        const variable = body[axis] ?? "x";
-        const factorText = body.replace(/[xyz*]/g, "");
-        const factor = factorText === "" ? 1 : parseFraction(factorText);
-        if (factor === null) {
-          return null;
-        }
-        coefficients["xyz".indexOf(variable)] = sign * factor;
-      } else {
-        const value = parseFraction(body);
-        if (value === null) {
-          return null;
-        }
-        constant += sign * value;
-      }
-    }
-    rotation.push(...coefficients);
-    translation[row] = constant;
+    rotation.push(...parsed.coefficients);
+    translation[row] = parsed.constant;
   }
   return { rotation, translation };
+}
+
+function parseOperatorRow(expr: string): { coefficients: number[]; constant: number } | null {
+  const coefficients = [0, 0, 0];
+  let constant = 0;
+  const terms = expr.match(/[+-]?[^+-]+/g);
+  if (!terms) {
+    return null;
+  }
+  for (const term of terms) {
+    const parsed = parseOperatorTerm(term);
+    if (!parsed) {
+      return null;
+    }
+    if (parsed.axisIndex >= 0) {
+      coefficients[parsed.axisIndex] = parsed.value;
+    } else {
+      constant += parsed.value;
+    }
+  }
+  return { coefficients, constant };
+}
+
+function parseOperatorTerm(term: string): { axisIndex: number; value: number } | null {
+  const sign = term.startsWith("-") ? -1 : 1;
+  const body = term.replace(/^[+-]/, "");
+  const axis = body.search(/[xyz]/);
+  if (axis >= 0) {
+    const variable = body[axis] ?? "x";
+    const factorText = body.replace(/[xyz*]/g, "");
+    const factor = factorText === "" ? 1 : parseFraction(factorText);
+    if (factor === null) {
+      return null;
+    }
+    return { axisIndex: "xyz".indexOf(variable), value: sign * factor };
+  }
+  const value = parseFraction(body);
+  if (value === null) {
+    return null;
+  }
+  return { axisIndex: -1, value: sign * value };
 }
 
 function parseFraction(text: string): number | null {
@@ -187,17 +204,29 @@ export type CellSite<T> = {
  * duplicates, and replicates over `range` cells — including atoms that sit exactly
  * on the far faces, so a 1×1×1 NaCl cell shows all 27 sites like Jmol's `packed`.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: applies symmetry operators and de-duplicates images in one pass; refactor candidate (see AGENTS.md)
 export function packCell<T>(
   sites: readonly CellSite<T>[],
   operators: readonly SymmetryOperator[],
   range: Vec3,
 ): CellSite<T>[] {
-  const ops = operators.length > 0 ? operators : [{ rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1], translation: [0, 0, 0] }];
+  const identity: SymmetryOperator = {
+    rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    translation: [0, 0, 0],
+  };
+  const ops = operators.length > 0 ? operators : [identity];
+  const unique = collectUniqueSites(sites, ops);
+  const packed: CellSite<T>[] = [];
+  for (const site of unique) {
+    expandSiteOverRange(site, range, packed);
+  }
+  return packed;
+}
+
+function collectUniqueSites<T>(sites: readonly CellSite<T>[], ops: readonly SymmetryOperator[]): CellSite<T>[] {
   const unique: CellSite<T>[] = [];
   for (const site of sites) {
     const local: Vec3[] = [];
-    for (const op of ops as readonly SymmetryOperator[]) {
+    for (const op of ops) {
       const f = applyOperator(op, site.fractional).map(wrap01) as Vec3;
       if (!local.some((g) => fractionalClose(f, g))) {
         local.push(f);
@@ -209,26 +238,25 @@ export function packCell<T>(
       }
     }
   }
+  return unique;
+}
 
-  const packed: CellSite<T>[] = [];
-  for (const site of unique) {
-    const [fx, fy, fz] = site.fractional;
-    for (let i = 0; i <= range[0]; i++) {
-      for (let j = 0; j <= range[1]; j++) {
-        for (let k = 0; k <= range[2]; k++) {
-          const g: Vec3 = [fx + i, fy + j, fz + k];
-          if (
-            g[0] <= range[0] + FRACTIONAL_TOLERANCE &&
-            g[1] <= range[1] + FRACTIONAL_TOLERANCE &&
-            g[2] <= range[2] + FRACTIONAL_TOLERANCE
-          ) {
-            packed.push({ fractional: g, data: site.data });
-          }
+function expandSiteOverRange<T>(site: CellSite<T>, range: Vec3, packed: CellSite<T>[]): void {
+  const [fx, fy, fz] = site.fractional;
+  for (let i = 0; i <= range[0]; i++) {
+    for (let j = 0; j <= range[1]; j++) {
+      for (let k = 0; k <= range[2]; k++) {
+        const g: Vec3 = [fx + i, fy + j, fz + k];
+        if (
+          g[0] <= range[0] + FRACTIONAL_TOLERANCE &&
+          g[1] <= range[1] + FRACTIONAL_TOLERANCE &&
+          g[2] <= range[2] + FRACTIONAL_TOLERANCE
+        ) {
+          packed.push({ fractional: g, data: site.data });
         }
       }
     }
   }
-  return packed;
 }
 
 function wrap01(v: number): number {

@@ -126,7 +126,6 @@ export function createBiomoleculesIcon(): ScreenIcon {
   return iconFrom(new Node({ children: [background(), helix, arrow] }));
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: draws the whole crystals icon in one pass; refactor candidate (see AGENTS.md)
 export function createCrystalsIcon(): ScreenIcon {
   // Rock salt: an oblique cube with alternating Na and Cl at the corners and edge midpoints.
   const s = 230;
@@ -134,33 +133,59 @@ export function createCrystalsIcon(): ScreenIcon {
   const oy = H / 2 + s / 2 - 20;
   const dx = 90;
   const dy = -70;
-  const point = (i: number, j: number, k: number) => [ox + (i * s) / 2 + (k * dx) / 2, oy - (j * s) / 2 + (k * dy) / 2];
-  const children: Node[] = [background()];
+  const point = (i: number, j: number, k: number): [number, number] => [
+    ox + (i * s) / 2 + (k * dx) / 2,
+    oy - (j * s) / 2 + (k * dy) / 2,
+  ];
   const lines = new Node();
+  const spheres = collectCrystalAtoms(point, lines);
+  spheres.sort((p, q) => q.depth - p.depth);
+  return iconFrom(new Node({ children: [background(), lines, ...spheres.map((p) => p.node)] }));
+}
+
+/** True for cube corners and edge midpoints only (skip face/body centres). */
+function isCubeSkeletonSite(i: number, j: number, k: number): boolean {
+  return [i, j, k].filter((v) => v === 1).length <= 1;
+}
+
+function addCrystalEdges(
+  lines: Node,
+  point: (i: number, j: number, k: number) => [number, number],
+  i: number,
+  j: number,
+  k: number,
+  x: number,
+  y: number,
+): void {
+  for (const [a, b, c] of [
+    [i + 1, j, k],
+    [i, j + 1, k],
+    [i, j, k + 1],
+  ] as const) {
+    if (a <= 2 && b <= 2 && c <= 2 && isCubeSkeletonSite(a, b, c)) {
+      const [x2, y2] = point(a, b, c);
+      lines.addChild(stick(x, y, x2, y2, MOL_SCOPE_SCREEN_ICONS_SETTINGS.CREATE_CRYSTALS_ICON_WIDTH));
+    }
+  }
+}
+
+function collectCrystalAtoms(
+  point: (i: number, j: number, k: number) => [number, number],
+  lines: Node,
+): { node: Node; depth: number }[] {
   const spheres: { node: Node; depth: number }[] = [];
   for (let i = 0; i <= 2; i++) {
     for (let j = 0; j <= 2; j++) {
       for (let k = 0; k <= 2; k++) {
-        if ([i, j, k].filter((v) => v === 1).length > 1) {
-          continue; // Keep corners and edge midpoints only, so the cube reads clearly.
+        if (!isCubeSkeletonSite(i, j, k)) {
+          continue;
         }
-        const [x = 0, y = 0] = point(i, j, k);
+        const [x, y] = point(i, j, k);
         const symbol = (i + j + k) % 2 === 0 ? "Na" : "Cl";
         spheres.push({ node: sphere(symbol, symbol === "Na" ? 58 : 76, x, y), depth: k });
-        for (const [a, b, c] of [
-          [i + 1, j, k],
-          [i, j + 1, k],
-          [i, j, k + 1],
-        ] as const) {
-          if (a <= 2 && b <= 2 && c <= 2 && [a, b, c].filter((v) => v === 1).length <= 1) {
-            const [x2 = 0, y2 = 0] = point(a, b, c);
-            lines.addChild(stick(x, y, x2, y2, MOL_SCOPE_SCREEN_ICONS_SETTINGS.CREATE_CRYSTALS_ICON_WIDTH));
-          }
-        }
+        addCrystalEdges(lines, point, i, j, k, x, y);
       }
     }
   }
-  spheres.sort((p, q) => q.depth - p.depth);
-  children.push(lines, ...spheres.map((p) => p.node));
-  return iconFrom(new Node({ children }));
+  return spheres;
 }

@@ -16,7 +16,78 @@ import { makeAtom, parseCoordinate, StructureParseError } from "./makeAtom.js";
 /** V2000 charge codes: 1 = +3, 2 = +2, 3 = +1, 5 = −1, 6 = −2, 7 = −3. */
 const CHARGE_CODES: Record<string, number> = { "1": 3, "2": 2, "3": 1, "5": -1, "6": -2, "7": -3 };
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: line-oriented MOL parser, one branch per block; refactor candidate (see AGENTS.md)
+type MolRecordParts = {
+  readonly atoms: Atom[];
+  readonly bonds: Bond[];
+  readonly positions: Float64Array;
+  readonly title: string;
+};
+
+function findCountsIndex(lines: readonly string[]): number {
+  const countsIndex = lines.findIndex((l) => /V2000/.test(l));
+  if (countsIndex >= 0) {
+    return countsIndex;
+  }
+  if (lines.some((l) => /V3000/.test(l))) {
+    throw new StructureParseError("molV3000");
+  }
+  return -1;
+}
+
+function readAtomBlock(
+  lines: readonly string[],
+  countsIndex: number,
+  atomCount: number,
+): { positions: Float64Array; symbols: string[]; charges: number[] } {
+  const positions = new Float64Array(3 * atomCount);
+  const symbols: string[] = [];
+  const charges = new Array<number>(atomCount).fill(0);
+  for (let i = 0; i < atomCount; i++) {
+    const row = lines[countsIndex + 1 + i] ?? "";
+    positions[3 * i] = parseCoordinate(row.slice(0, 10));
+    positions[3 * i + 1] = parseCoordinate(row.slice(10, 20));
+    positions[3 * i + 2] = parseCoordinate(row.slice(20, 30));
+    symbols.push(row.slice(31, 34).trim());
+    charges[i] = CHARGE_CODES[row.slice(36, 39).trim()] ?? 0;
+  }
+  return { positions, symbols, charges };
+}
+
+function readBondBlock(lines: readonly string[], countsIndex: number, atomCount: number, bondCount: number): Bond[] {
+  const recordBonds: Bond[] = [];
+  for (let i = 0; i < bondCount; i++) {
+    const row = lines[countsIndex + 1 + atomCount + i] ?? "";
+    const a = Number.parseInt(row.slice(0, 3), 10) - 1;
+    const b = Number.parseInt(row.slice(3, 6), 10) - 1;
+    const type = Number.parseInt(row.slice(6, 9), 10);
+    if (a >= 0 && b >= 0 && a < atomCount && b < atomCount) {
+      recordBonds.push({ a, b, order: type === 4 ? 1.5 : Math.min(3, Math.max(1, type)) });
+    }
+  }
+  return recordBonds;
+}
+
+function parseMolRecord(record: string): MolRecordParts | null {
+  const lines = record.replace(/^\s*\n/, "").split(/\r?\n/);
+  const countsIndex = findCountsIndex(lines);
+  if (countsIndex < 0) {
+    return null;
+  }
+  const counts = lines[countsIndex] ?? "";
+  const atomCount = Number.parseInt(counts.slice(0, 3), 10);
+  const bondCount = Number.parseInt(counts.slice(3, 6), 10);
+  if (!Number.isFinite(atomCount)) {
+    throw new StructureParseError("molCounts");
+  }
+  const { positions, symbols, charges } = readAtomBlock(lines, countsIndex, atomCount);
+  applyPropertyCharges(lines.slice(countsIndex + 1 + atomCount + bondCount), charges);
+  const atoms = symbols.map((symbol, i) =>
+    makeAtom({ element: elementForSymbol(symbol), serial: i + 1, formalCharge: charges[i] ?? 0 }),
+  );
+  const bonds = readBondBlock(lines, countsIndex, atomCount, bondCount);
+  return { atoms, bonds, positions, title: (lines[0] ?? "").trim() };
+}
+
 export function parseMol(text: string, fallbackTitle: string): Structure {
   const records = text.split(/^\$\$\$\$\s*$/m).filter((r) => r.trim().length > 0);
   let atoms: Atom[] = [];
@@ -24,53 +95,18 @@ export function parseMol(text: string, fallbackTitle: string): Structure {
   let title = "";
   const frames: Frame[] = [];
   for (const record of records) {
-    const lines = record.replace(/^\s*\n/, "").split(/\r?\n/);
-    const countsIndex = lines.findIndex((l) => /V2000/.test(l));
-    if (countsIndex < 0) {
-      if (lines.some((l) => /V3000/.test(l))) {
-        throw new StructureParseError("molV3000");
-      }
+    const parts = parseMolRecord(record);
+    if (parts === null) {
       continue;
     }
-    const counts = lines[countsIndex] ?? "";
-    const atomCount = Number.parseInt(counts.slice(0, 3), 10);
-    const bondCount = Number.parseInt(counts.slice(3, 6), 10);
-    if (!Number.isFinite(atomCount)) {
-      throw new StructureParseError("molCounts");
-    }
-    const positions = new Float64Array(3 * atomCount);
-    const symbols: string[] = [];
-    const charges = new Array<number>(atomCount).fill(0);
-    for (let i = 0; i < atomCount; i++) {
-      const row = lines[countsIndex + 1 + i] ?? "";
-      positions[3 * i] = parseCoordinate(row.slice(0, 10));
-      positions[3 * i + 1] = parseCoordinate(row.slice(10, 20));
-      positions[3 * i + 2] = parseCoordinate(row.slice(20, 30));
-      symbols.push(row.slice(31, 34).trim());
-      charges[i] = CHARGE_CODES[row.slice(36, 39).trim()] ?? 0;
-    }
-    applyPropertyCharges(lines.slice(countsIndex + 1 + atomCount + bondCount), charges);
-    const recordAtoms = symbols.map((symbol, i) =>
-      makeAtom({ element: elementForSymbol(symbol), serial: i + 1, formalCharge: charges[i] ?? 0 }),
-    );
-    const recordBonds: Bond[] = [];
-    for (let i = 0; i < bondCount; i++) {
-      const row = lines[countsIndex + 1 + atomCount + i] ?? "";
-      const a = Number.parseInt(row.slice(0, 3), 10) - 1;
-      const b = Number.parseInt(row.slice(3, 6), 10) - 1;
-      const type = Number.parseInt(row.slice(6, 9), 10);
-      if (a >= 0 && b >= 0 && a < atomCount && b < atomCount) {
-        recordBonds.push({ a, b, order: type === 4 ? 1.5 : Math.min(3, Math.max(1, type)) });
-      }
-    }
     if (frames.length === 0) {
-      atoms = recordAtoms;
-      bonds = recordBonds;
-      title = (lines[0] ?? "").trim();
-    } else if (!framesCompatible(atoms, recordAtoms, bonds, recordBonds)) {
+      atoms = parts.atoms;
+      bonds = parts.bonds;
+      title = parts.title;
+    } else if (!framesCompatible(atoms, parts.atoms, bonds, parts.bonds)) {
       throw new StructureParseError("incompatibleFrames");
     }
-    frames.push({ comment: (lines[0] ?? "").trim(), positions, vibrations: null });
+    frames.push({ comment: parts.title, positions: parts.positions, vibrations: null });
   }
   if (frames.length === 0) {
     throw new StructureParseError("empty");

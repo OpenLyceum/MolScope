@@ -85,13 +85,48 @@ export function buildPolymerPaths(structure: Structure, positions: Float64Array)
   return paths;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one pass builds the backbone spline for a residue run; refactor candidate (see AGENTS.md)
 function buildPath(structure: Structure, run: readonly number[], pos: (atom: number) => Vec3): PolymerPath {
   const residues = structure.residues;
   const isNucleic = residues[run[0] ?? 0]?.kind === ResidueKind.NUCLEIC;
   const control = run.map((r) => pos(residues[r]?.leadAtom ?? 0));
+  const guides = buildResidueGuides(structure, run, control, pos);
 
-  // Guide vectors per residue, sign-aligned so sheets do not twist at every residue.
+  const ssOf = (k: number) => structure.atoms[residues[run[k] ?? 0]?.leadAtom ?? 0]?.secondaryStructure ?? 0;
+  const intervals = run.length - 1;
+  const count = intervals * SAMPLES_PER_RESIDUE + 1;
+  const points = new Float64Array(3 * count);
+  const guideOut = new Float64Array(3 * count);
+  const normals = new Float64Array(3 * count);
+  const halfWidths = new Float64Array(count);
+  const residueOut = new Int32Array(count);
+
+  for (let s = 0; s < count; s++) {
+    fillPathSample(
+      s,
+      count,
+      intervals,
+      run,
+      control,
+      guides,
+      isNucleic,
+      ssOf,
+      points,
+      guideOut,
+      normals,
+      halfWidths,
+      residueOut,
+    );
+  }
+  return { points, guides: guideOut, normals, halfWidths, residues: residueOut, isNucleic };
+}
+
+function buildResidueGuides(
+  structure: Structure,
+  run: readonly number[],
+  control: readonly Vec3[],
+  pos: (atom: number) => Vec3,
+): Vec3[] {
+  const residues = structure.residues;
   const guides: Vec3[] = [];
   run.forEach((r, k) => {
     const residue = residues[r];
@@ -110,51 +145,65 @@ function buildPath(structure: Structure, run: readonly number[], pos: (atom: num
     }
     guides.push(g);
   });
+  return guides;
+}
 
-  const ssOf = (k: number) => structure.atoms[residues[run[k] ?? 0]?.leadAtom ?? 0]?.secondaryStructure ?? 0;
-  const intervals = run.length - 1;
-  const count = intervals * SAMPLES_PER_RESIDUE + 1;
-  const points = new Float64Array(3 * count);
-  const guideOut = new Float64Array(3 * count);
-  const normals = new Float64Array(3 * count);
-  const halfWidths = new Float64Array(count);
-  const residueOut = new Int32Array(count);
+function fillPathSample(
+  s: number,
+  count: number,
+  intervals: number,
+  run: readonly number[],
+  control: readonly Vec3[],
+  guides: readonly Vec3[],
+  isNucleic: boolean,
+  ssOf: (k: number) => number,
+  points: Float64Array,
+  guideOut: Float64Array,
+  normals: Float64Array,
+  halfWidths: Float64Array,
+  residueOut: Int32Array,
+): void {
+  const k = Math.min(Math.floor(s / SAMPLES_PER_RESIDUE), intervals - 1);
+  const t = (s - k * SAMPLES_PER_RESIDUE) / SAMPLES_PER_RESIDUE;
+  const p0 = control[Math.max(k - 1, 0)] ?? [0, 0, 0];
+  const p1 = control[k] ?? p0;
+  const p2 = control[k + 1] ?? p1;
+  const p3 = control[Math.min(k + 2, run.length - 1)] ?? p2;
+  const p = catmullRom(p0, p1, p2, p3, t);
+  const tangent = normalize(catmullRomTangent(p0, p1, p2, p3, t));
+  const g0 = guides[k] ?? [0, 0, 1];
+  const g1 = guides[k + 1] ?? g0;
+  let g: Vec3 = [g0[0] * (1 - t) + g1[0] * t, g0[1] * (1 - t) + g1[1] * t, g0[2] * (1 - t) + g1[2] * t];
+  g = normalize(subtract(g, scaleVec(tangent, dot(g, tangent))));
+  const n = normalize(cross(tangent, g));
+  points.set(p, 3 * s);
+  guideOut.set(g, 3 * s);
+  normals.set(n, 3 * s);
+  halfWidths[s] = ribbonHalfWidth(isNucleic, ssOf, k, intervals, t);
+  // Colour follows the nearest residue so colour boundaries sit midway between Cα atoms.
+  const owner = s === count - 1 ? intervals : t < 0.5 ? k : k + 1;
+  residueOut[s] = run[owner] ?? 0;
+}
 
-  for (let s = 0; s < count; s++) {
-    const k = Math.min(Math.floor(s / SAMPLES_PER_RESIDUE), intervals - 1);
-    const t = (s - k * SAMPLES_PER_RESIDUE) / SAMPLES_PER_RESIDUE;
-    const p0 = control[Math.max(k - 1, 0)] ?? [0, 0, 0];
-    const p1 = control[k] ?? p0;
-    const p2 = control[k + 1] ?? p1;
-    const p3 = control[Math.min(k + 2, run.length - 1)] ?? p2;
-    const p = catmullRom(p0, p1, p2, p3, t);
-    const tangent = normalize(catmullRomTangent(p0, p1, p2, p3, t));
-    const g0 = guides[k] ?? [0, 0, 1];
-    const g1 = guides[k + 1] ?? g0;
-    let g: Vec3 = [g0[0] * (1 - t) + g1[0] * t, g0[1] * (1 - t) + g1[1] * t, g0[2] * (1 - t) + g1[2] * t];
-    g = normalize(subtract(g, scaleVec(tangent, dot(g, tangent))));
-    const n = normalize(cross(tangent, g));
-    points.set(p, 3 * s);
-    guideOut.set(g, 3 * s);
-    normals.set(n, 3 * s);
-
-    // Interval k takes the secondary structure of its starting residue.
-    const ss = ssOf(k);
-    let w = 0;
-    if (!isNucleic) {
-      if (ss === SecondaryStructure.HELIX) {
-        w = HELIX_HALF_WIDTH;
-      } else if (ss === SecondaryStructure.SHEET) {
-        const strandEnds = ssOf(k + 1) !== SecondaryStructure.SHEET || k + 1 === intervals;
-        w = strandEnds ? ARROW_HALF_WIDTH * (1 - t) + TUBE_RADIUS * t : SHEET_HALF_WIDTH;
-      }
-    }
-    halfWidths[s] = w;
-    // Colour follows the nearest residue so colour boundaries sit midway between Cα atoms.
-    const owner = s === count - 1 ? intervals : t < 0.5 ? k : k + 1;
-    residueOut[s] = run[owner] ?? 0;
+function ribbonHalfWidth(
+  isNucleic: boolean,
+  ssOf: (k: number) => number,
+  k: number,
+  intervals: number,
+  t: number,
+): number {
+  if (isNucleic) {
+    return 0;
   }
-  return { points, guides: guideOut, normals, halfWidths, residues: residueOut, isNucleic };
+  const ss = ssOf(k);
+  if (ss === SecondaryStructure.HELIX) {
+    return HELIX_HALF_WIDTH;
+  }
+  if (ss === SecondaryStructure.SHEET) {
+    const strandEnds = ssOf(k + 1) !== SecondaryStructure.SHEET || k + 1 === intervals;
+    return strandEnds ? ARROW_HALF_WIDTH * (1 - t) + TUBE_RADIUS * t : SHEET_HALF_WIDTH;
+  }
+  return 0;
 }
 
 function scaleVec(v: Vec3, s: number): Vec3 {

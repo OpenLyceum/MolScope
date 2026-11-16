@@ -88,7 +88,6 @@ export class StructureInfoPanel extends MolScopePanel {
       ],
     });
 
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one summary line per structure property; refactor candidate (see AGENTS.md)
     const updateSummary = () => {
       const structure = model.structure;
       const state = model.displayState;
@@ -108,64 +107,9 @@ export class StructureInfoPanel extends MolScopePanel {
         return;
       }
       titleText.string = escapeHtml(structureDisplayName(model));
-      const formula = hillFormula(structure)
-        .map((t) => (t.count === 1 ? t.symbol : `${t.symbol}<sub>${t.count}</sub>`))
-        .join("");
-      const lines: string[] = [];
-      if (!(structure.isBiomolecule || structure.unitCell)) {
-        lines.push(formula);
-        lines.push(StringUtils.fillIn(info.molarMassStringProperty.value, { value: toFixed(molarMass(structure), 2) }));
-      }
-      lines.push(
-        StringUtils.fillIn(info.atomsBondsStringProperty.value, {
-          atoms: structure.atoms.length,
-          bonds: structure.bonds.length,
-        }),
-      );
-      if (structure.isBiomolecule) {
-        lines.push(
-          StringUtils.fillIn(info.residuesChainsStringProperty.value, {
-            residues: structure.residues.filter((r) => r.leadAtom >= 0).length,
-            chains: new Set(structure.atoms.map((a) => a.chain)).size,
-          }),
-        );
-      }
-      if (structure.secondaryStructureSource !== SecondaryStructureSource.NONE) {
-        const source =
-          structure.secondaryStructureSource === SecondaryStructureSource.FILE
-            ? info.secondaryStructureFromFileStringProperty.value
-            : info.secondaryStructureEstimatedStringProperty.value;
-        lines.push(escapeHtml(source));
-      }
-      const cell = structure.unitCell;
-      if (cell && structure.format === "CIF") {
-        const p = cell.parameters;
-        lines.push(
-          StringUtils.fillIn(info.cellStringProperty.value, {
-            a: toFixed(p.a, 3),
-            b: toFixed(p.b, 3),
-            c: toFixed(p.c, 3),
-          }),
-          StringUtils.fillIn(info.cellAnglesStringProperty.value, {
-            alpha: toFixed(p.alpha, 1),
-            beta: toFixed(p.beta, 1),
-            gamma: toFixed(p.gamma, 1),
-          }),
-        );
-        if (cell.spaceGroup) {
-          lines.push(StringUtils.fillIn(info.spaceGroupStringProperty.value, { name: escapeHtml(cell.spaceGroup) }));
-        }
-      }
-      // Trajectories and vibration files name each frame (e.g. "Water: bend, 1595 cm^-1").
-      const comment = model.currentFrame?.comment ?? "";
-      if (structure.frames.length > 1 && comment) {
-        lines.push(`<i>${escapeHtml(comment.replace(/\^-1/g, "⁻¹"))}</i>`);
-      }
+      const lines = buildSummaryLines(structure, state, model, info);
       const selected = state.selectedCount();
       const partial = selected !== state.atomCount;
-      if (partial) {
-        lines.push(StringUtils.fillIn(info.selectedStringProperty.value, { count: selected }));
-      }
       detailsText.string = lines.join("<br>");
       selectionButtons.visible = partial || model.pickingModeProperty.value === PickingMode.SELECT;
     };
@@ -267,4 +211,112 @@ export class StructureInfoPanel extends MolScopePanel {
 /** RichText interprets markup; structure titles and atom names come from files. */
 function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+type InfoStrings = ReturnType<StringManager["getInfo"]>;
+
+function buildSummaryLines(
+  structure: NonNullable<ViewerModel["structure"]>,
+  state: NonNullable<ViewerModel["displayState"]>,
+  model: ViewerModel,
+  info: InfoStrings,
+): string[] {
+  const lines: string[] = [];
+  pushCompositionLines(lines, structure, info);
+  lines.push(
+    StringUtils.fillIn(info.atomsBondsStringProperty.value, {
+      atoms: structure.atoms.length,
+      bonds: structure.bonds.length,
+    }),
+  );
+  pushBiomoleculeLines(lines, structure, info);
+  pushSecondaryStructureLine(lines, structure, info);
+  pushCellLines(lines, structure, info);
+  pushFrameCommentLine(lines, structure, model);
+  const selected = state.selectedCount();
+  if (selected !== state.atomCount) {
+    lines.push(StringUtils.fillIn(info.selectedStringProperty.value, { count: selected }));
+  }
+  return lines;
+}
+
+function pushCompositionLines(
+  lines: string[],
+  structure: NonNullable<ViewerModel["structure"]>,
+  info: InfoStrings,
+): void {
+  if (structure.isBiomolecule || structure.unitCell) {
+    return;
+  }
+  const formula = hillFormula(structure)
+    .map((t) => (t.count === 1 ? t.symbol : `${t.symbol}<sub>${t.count}</sub>`))
+    .join("");
+  lines.push(formula);
+  lines.push(StringUtils.fillIn(info.molarMassStringProperty.value, { value: toFixed(molarMass(structure), 2) }));
+}
+
+function pushBiomoleculeLines(
+  lines: string[],
+  structure: NonNullable<ViewerModel["structure"]>,
+  info: InfoStrings,
+): void {
+  if (!structure.isBiomolecule) {
+    return;
+  }
+  lines.push(
+    StringUtils.fillIn(info.residuesChainsStringProperty.value, {
+      residues: structure.residues.filter((r) => r.leadAtom >= 0).length,
+      chains: new Set(structure.atoms.map((a) => a.chain)).size,
+    }),
+  );
+}
+
+function pushSecondaryStructureLine(
+  lines: string[],
+  structure: NonNullable<ViewerModel["structure"]>,
+  info: InfoStrings,
+): void {
+  if (structure.secondaryStructureSource === SecondaryStructureSource.NONE) {
+    return;
+  }
+  const source =
+    structure.secondaryStructureSource === SecondaryStructureSource.FILE
+      ? info.secondaryStructureFromFileStringProperty.value
+      : info.secondaryStructureEstimatedStringProperty.value;
+  lines.push(escapeHtml(source));
+}
+
+function pushCellLines(lines: string[], structure: NonNullable<ViewerModel["structure"]>, info: InfoStrings): void {
+  const cell = structure.unitCell;
+  if (!(cell && structure.format === "CIF")) {
+    return;
+  }
+  const p = cell.parameters;
+  lines.push(
+    StringUtils.fillIn(info.cellStringProperty.value, {
+      a: toFixed(p.a, 3),
+      b: toFixed(p.b, 3),
+      c: toFixed(p.c, 3),
+    }),
+    StringUtils.fillIn(info.cellAnglesStringProperty.value, {
+      alpha: toFixed(p.alpha, 1),
+      beta: toFixed(p.beta, 1),
+      gamma: toFixed(p.gamma, 1),
+    }),
+  );
+  if (cell.spaceGroup) {
+    lines.push(StringUtils.fillIn(info.spaceGroupStringProperty.value, { name: escapeHtml(cell.spaceGroup) }));
+  }
+}
+
+function pushFrameCommentLine(
+  lines: string[],
+  structure: NonNullable<ViewerModel["structure"]>,
+  model: ViewerModel,
+): void {
+  // Trajectories and vibration files name each frame (e.g. "Water: bend, 1595 cm^-1").
+  const comment = model.currentFrame?.comment ?? "";
+  if (structure.frames.length > 1 && comment) {
+    lines.push(`<i>${escapeHtml(comment.replace(/\^-1/g, "⁻¹"))}</i>`);
+  }
 }

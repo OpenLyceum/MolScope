@@ -231,7 +231,6 @@ export class ScriptEngine {
     return messages;
   }
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: command dispatcher with one branch per script command; refactor candidate (see AGENTS.md)
   private execute(command: string): ScriptMessage[] | Promise<ScriptMessage[]> {
     const [head = "", ...restTokens] = command.split(/\s+/);
     const verb = head.toLowerCase();
@@ -248,70 +247,12 @@ export class ScriptEngine {
     if (verb === "load") {
       return this.load(rest);
     }
-    // View commands that do not need a structure.
-    switch (verb) {
-      case "spin":
-        if (first === "" || ON_WORDS.has(first)) {
-          this.target.setSpin(true);
-        } else if (OFF_WORDS.has(first)) {
-          this.target.setSpin(false);
-        } else {
-          const rate = Number(first);
-          if (!Number.isFinite(rate)) {
-            return [badArgument(first)];
-          }
-          this.target.setSpin(rate !== 0, rate);
-        }
-        return [];
-      case "rotate": {
-        const axisName = ["x", "y", "z"].includes(first) ? first : "y";
-        const degrees = Number(["x", "y", "z"].includes(first) ? args[1] : first);
-        if (!Number.isFinite(degrees)) {
-          return [badArgument(args.join(" "))];
-        }
-        const axis: Vec3 = axisName === "x" ? [1, 0, 0] : axisName === "y" ? [0, 1, 0] : [0, 0, 1];
-        this.target.rotate(axis, degrees);
-        return [];
-      }
-      case "zoom":
-        if (first === "in") {
-          this.target.zoomBy(1.25);
-        } else if (first === "out") {
-          this.target.zoomBy(SCRIPT_ENGINE_SETTINGS.ZOOM_OUT_FACTOR);
-        } else if (first === "" || ON_WORDS.has(first)) {
-          this.target.setZoomPercent(100);
-        } else {
-          const percent = Number(first.replace("%", ""));
-          if (!Number.isFinite(percent) || percent <= 0) {
-            return [badArgument(first)];
-          }
-          this.target.setZoomPercent(percent);
-        }
-        return [];
-      case "reset":
-        this.target.resetView();
-        return [];
-      case "background": {
-        return this.background(first);
-      }
-      case "frame":
-      case "model": {
-        if (first === "next" || first === "prev") {
-          this.target.setFrame(first);
-          return [];
-        }
-        const n = Number(first);
-        if (!Number.isInteger(n)) {
-          return [badArgument(first)];
-        }
-        this.target.setFrame(n - 1);
-        return [];
-      }
-      case "set":
-        return this.set(args);
-      default:
-        break;
+
+    const viewResult = this.executeViewCommand(verb, args, first);
+    if (viewResult !== null) {
+      return viewResult;
     }
+
     const toggle = this.toggleFor(verb);
     if (toggle) {
       this.target.setToggle(toggle, first === "" || ON_WORDS.has(first) || first === "calculate");
@@ -326,71 +267,71 @@ export class ScriptEngine {
         : [message(ScriptMessageKey.UNKNOWN_COMMAND, true, { command: head })];
     }
 
+    return this.executeStructureCommand(verb, rest, args, first, head, state, context);
+  }
+
+  /** View / camera commands that do not need a loaded structure. Returns null if `verb` is not one of them. */
+  private executeViewCommand(verb: string, args: readonly string[], first: string): ScriptMessage[] | null {
     switch (verb) {
-      case "select": {
-        state.setSelection(evaluateSelection(rest, context));
-        this.target.displayChanged();
-        return [message(ScriptMessageKey.SELECTED, false, { count: state.selectedCount() })];
-      }
-      case "restrict": {
-        const mask = evaluateSelection(rest, context);
-        state.setSelection(mask.map((v) => 1 - v));
-        state.setHidden(true);
-        state.setSelection(mask);
-        state.setHidden(false);
-        this.target.displayChanged();
-        return [message(ScriptMessageKey.SELECTED, false, { count: state.selectedCount() })];
-      }
-      case "display":
-      case "hide": {
-        const previous = state.selected.slice();
-        state.setSelection(evaluateSelection(rest || "all", context));
-        state.setHidden(verb === "hide");
-        state.setSelection(previous);
-        this.target.displayChanged();
+      case "spin":
+        return this.cmdSpin(first);
+      case "rotate":
+        return this.cmdRotate(args, first);
+      case "zoom":
+        return this.cmdZoom(first);
+      case "reset":
+        this.target.resetView();
         return [];
-      }
+      case "background":
+        return this.background(first);
+      case "frame":
+      case "model":
+        return this.cmdFrame(first);
+      case "set":
+        return this.set(args);
+      default:
+        return null;
+    }
+  }
+
+  /** Commands that act on the current selection / display state. */
+  private executeStructureCommand(
+    verb: string,
+    rest: string,
+    args: readonly string[],
+    first: string,
+    head: string,
+    state: DisplayState,
+    context: SelectionContext,
+  ): ScriptMessage[] {
+    switch (verb) {
+      case "select":
+        return this.cmdSelect(state, rest, context);
+      case "restrict":
+        return this.cmdRestrict(state, rest, context);
+      case "display":
+      case "hide":
+        return this.cmdDisplayHide(state, rest, context, verb === "hide");
       case "spacefill":
       case "cpk":
         return this.spacefill(state, first);
-      case "wireframe": {
-        const value = ON_WORDS.has(first) || first === "" ? WIREFRAME_LINE : OFF_WORDS.has(first) ? 0 : Number(first);
-        if (!Number.isFinite(value)) {
-          return [badArgument(first)];
-        }
-        state.setBondRadius(value);
-        this.target.displayChanged();
-        return [];
-      }
-      case "style": {
-        const style = STYLE_NAMES[first.replace(/[-_\s&]/g, "")];
-        if (!style) {
-          return [badArgument(first)];
-        }
-        this.target.setStyle(style);
-        return [];
-      }
+      case "wireframe":
+        return this.cmdWireframe(state, first);
+      case "style":
+        return this.cmdStyle(first);
       case "cartoon":
       case "cartoons":
       case "ribbon":
       case "ribbons":
       case "trace":
-      case "backbone": {
-        const kind = verb === "trace" ? "trace" : verb === "backbone" ? "backbone" : "cartoon";
-        state.setPolymer(kind, !OFF_WORDS.has(first));
-        this.target.displayChanged();
-        return [];
-      }
+      case "backbone":
+        return this.cmdPolymer(state, verb, first);
       case "color":
       case "colour":
         return this.color(state, args);
       case "label":
-      case "labels": {
-        const format = rest.replace(/^["']|["']$/g, "");
-        state.setLabel(OFF_WORDS.has(first) ? null : ON_WORDS.has(first) || first === "" ? "%a" : format);
-        this.target.displayChanged();
-        return [];
-      }
+      case "labels":
+        return this.cmdLabel(state, rest, first);
       case "measure":
       case "measures":
       case "measurements":
@@ -403,6 +344,120 @@ export class ScriptEngine {
       default:
         return [message(ScriptMessageKey.UNKNOWN_COMMAND, true, { command: head })];
     }
+  }
+
+  private cmdSpin(first: string): ScriptMessage[] {
+    if (first === "" || ON_WORDS.has(first)) {
+      this.target.setSpin(true);
+    } else if (OFF_WORDS.has(first)) {
+      this.target.setSpin(false);
+    } else {
+      const rate = Number(first);
+      if (!Number.isFinite(rate)) {
+        return [badArgument(first)];
+      }
+      this.target.setSpin(rate !== 0, rate);
+    }
+    return [];
+  }
+
+  private cmdRotate(args: readonly string[], first: string): ScriptMessage[] {
+    const axisName = ["x", "y", "z"].includes(first) ? first : "y";
+    const degrees = Number(["x", "y", "z"].includes(first) ? args[1] : first);
+    if (!Number.isFinite(degrees)) {
+      return [badArgument(args.join(" "))];
+    }
+    const axis: Vec3 = axisName === "x" ? [1, 0, 0] : axisName === "y" ? [0, 1, 0] : [0, 0, 1];
+    this.target.rotate(axis, degrees);
+    return [];
+  }
+
+  private cmdZoom(first: string): ScriptMessage[] {
+    if (first === "in") {
+      this.target.zoomBy(1.25);
+    } else if (first === "out") {
+      this.target.zoomBy(SCRIPT_ENGINE_SETTINGS.ZOOM_OUT_FACTOR);
+    } else if (first === "" || ON_WORDS.has(first)) {
+      this.target.setZoomPercent(100);
+    } else {
+      const percent = Number(first.replace("%", ""));
+      if (!Number.isFinite(percent) || percent <= 0) {
+        return [badArgument(first)];
+      }
+      this.target.setZoomPercent(percent);
+    }
+    return [];
+  }
+
+  private cmdFrame(first: string): ScriptMessage[] {
+    if (first === "next" || first === "prev") {
+      this.target.setFrame(first);
+      return [];
+    }
+    const n = Number(first);
+    if (!Number.isInteger(n)) {
+      return [badArgument(first)];
+    }
+    this.target.setFrame(n - 1);
+    return [];
+  }
+
+  private cmdSelect(state: DisplayState, rest: string, context: SelectionContext): ScriptMessage[] {
+    state.setSelection(evaluateSelection(rest, context));
+    this.target.displayChanged();
+    return [message(ScriptMessageKey.SELECTED, false, { count: state.selectedCount() })];
+  }
+
+  private cmdRestrict(state: DisplayState, rest: string, context: SelectionContext): ScriptMessage[] {
+    const mask = evaluateSelection(rest, context);
+    state.setSelection(mask.map((v) => 1 - v));
+    state.setHidden(true);
+    state.setSelection(mask);
+    state.setHidden(false);
+    this.target.displayChanged();
+    return [message(ScriptMessageKey.SELECTED, false, { count: state.selectedCount() })];
+  }
+
+  private cmdDisplayHide(state: DisplayState, rest: string, context: SelectionContext, hide: boolean): ScriptMessage[] {
+    const previous = state.selected.slice();
+    state.setSelection(evaluateSelection(rest || "all", context));
+    state.setHidden(hide);
+    state.setSelection(previous);
+    this.target.displayChanged();
+    return [];
+  }
+
+  private cmdWireframe(state: DisplayState, first: string): ScriptMessage[] {
+    const value = ON_WORDS.has(first) || first === "" ? WIREFRAME_LINE : OFF_WORDS.has(first) ? 0 : Number(first);
+    if (!Number.isFinite(value)) {
+      return [badArgument(first)];
+    }
+    state.setBondRadius(value);
+    this.target.displayChanged();
+    return [];
+  }
+
+  private cmdStyle(first: string): ScriptMessage[] {
+    const style = STYLE_NAMES[first.replace(/[-_\s&]/g, "")];
+    if (!style) {
+      return [badArgument(first)];
+    }
+    this.target.setStyle(style);
+    return [];
+  }
+
+  private cmdPolymer(state: DisplayState, verb: string, first: string): ScriptMessage[] {
+    const kind = verb === "trace" ? "trace" : verb === "backbone" ? "backbone" : "cartoon";
+    state.setPolymer(kind, !OFF_WORDS.has(first));
+    this.target.displayChanged();
+    return [];
+  }
+
+  private cmdLabel(state: DisplayState, rest: string, first: string): ScriptMessage[] {
+    const format = rest.replace(/^["']|["']$/g, "");
+    state.setLabel(OFF_WORDS.has(first) ? null : ON_WORDS.has(first) || first === "" ? "%a" : format);
+    this.target.displayChanged();
+    return [];
   }
 
   private async load(rest: string): Promise<ScriptMessage[]> {

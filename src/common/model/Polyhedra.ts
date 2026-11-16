@@ -82,7 +82,6 @@ export function findPolyhedra(structure: Structure, positions: Float64Array): Po
 }
 
 /** Brute-force hull of ≤ 12 points: a triangle is a face if every other point lies on one side. */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: incremental convex-hull algorithm; refactor candidate (see AGENTS.md)
 function convexHullFaces(points: readonly number[], p: Float64Array, center: number): [number, number, number][] {
   const get = (i: number) => [p[3 * i] ?? 0, p[3 * i + 1] ?? 0, p[3 * i + 2] ?? 0] as const;
   const c = get(center);
@@ -91,45 +90,69 @@ function convexHullFaces(points: readonly number[], p: Float64Array, center: num
   for (let i = 0; i < points.length; i++) {
     for (let j = i + 1; j < points.length; j++) {
       for (let k = j + 1; k < points.length; k++) {
-        const ia = points[i] ?? 0;
-        const ib = points[j] ?? 0;
-        const ic = points[k] ?? 0;
-        const a = get(ia);
-        const b = get(ib);
-        const d = get(ic);
-        const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-        const v = [d[0] - a[0], d[1] - a[1], d[2] - a[2]];
-        const n = [
-          (u[1] ?? 0) * (v[2] ?? 0) - (u[2] ?? 0) * (v[1] ?? 0),
-          (u[2] ?? 0) * (v[0] ?? 0) - (u[0] ?? 0) * (v[2] ?? 0),
-          (u[0] ?? 0) * (v[1] ?? 0) - (u[1] ?? 0) * (v[0] ?? 0),
-        ];
-        const side = (q: readonly number[]) =>
-          (n[0] ?? 0) * ((q[0] ?? 0) - a[0]) + (n[1] ?? 0) * ((q[1] ?? 0) - a[1]) + (n[2] ?? 0) * ((q[2] ?? 0) - a[2]);
-        let positive = 0;
-        let negative = 0;
-        for (const other of points) {
-          if (other === ia || other === ib || other === ic) {
-            continue;
-          }
-          const s = side(get(other));
-          if (s > eps) {
-            positive++;
-          } else if (s < -eps) {
-            negative++;
-          }
-        }
-        if (positive > 0 && negative > 0) {
-          continue;
-        }
-        // Skip coplanar duplicates (a square face yields two triangles plus two degenerate ones).
-        if (faces.some((f) => f.includes(ia) && f.includes(ib) && f.includes(ic))) {
-          continue;
-        }
-        // Wind outward: the centre must be on the negative side.
-        faces.push(side(c) > 0 ? [ia, ic, ib] : [ia, ib, ic]);
+        maybeAddHullFace(points[i] ?? 0, points[j] ?? 0, points[k] ?? 0, points, get, c, eps, faces);
       }
     }
   }
   return faces;
+}
+
+type Point3 = readonly [number, number, number];
+
+function maybeAddHullFace(
+  ia: number,
+  ib: number,
+  ic: number,
+  points: readonly number[],
+  get: (i: number) => Point3,
+  center: Point3,
+  eps: number,
+  faces: [number, number, number][],
+): void {
+  const a = get(ia);
+  const b = get(ib);
+  const d = get(ic);
+  const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+  const v = [d[0] - a[0], d[1] - a[1], d[2] - a[2]];
+  const n = [
+    (u[1] ?? 0) * (v[2] ?? 0) - (u[2] ?? 0) * (v[1] ?? 0),
+    (u[2] ?? 0) * (v[0] ?? 0) - (u[0] ?? 0) * (v[2] ?? 0),
+    (u[0] ?? 0) * (v[1] ?? 0) - (u[1] ?? 0) * (v[0] ?? 0),
+  ];
+  const side = (q: readonly number[]) =>
+    (n[0] ?? 0) * ((q[0] ?? 0) - a[0]) + (n[1] ?? 0) * ((q[1] ?? 0) - a[1]) + (n[2] ?? 0) * ((q[2] ?? 0) - a[2]);
+  if (!isOneSidedFace(ia, ib, ic, points, get, side, eps)) {
+    return;
+  }
+  // Skip coplanar duplicates (a square face yields two triangles plus two degenerate ones).
+  if (faces.some((f) => f.includes(ia) && f.includes(ib) && f.includes(ic))) {
+    return;
+  }
+  // Wind outward: the centre must be on the negative side.
+  faces.push(side(center) > 0 ? [ia, ic, ib] : [ia, ib, ic]);
+}
+
+function isOneSidedFace(
+  ia: number,
+  ib: number,
+  ic: number,
+  points: readonly number[],
+  get: (i: number) => Point3,
+  side: (q: readonly number[]) => number,
+  eps: number,
+): boolean {
+  let positive = 0;
+  let negative = 0;
+  for (const other of points) {
+    if (other === ia || other === ib || other === ic) {
+      continue;
+    }
+    const s = side(get(other));
+    if (s > eps) {
+      positive++;
+    } else if (s < -eps) {
+      negative++;
+    }
+  }
+  return !(positive > 0 && negative > 0);
 }

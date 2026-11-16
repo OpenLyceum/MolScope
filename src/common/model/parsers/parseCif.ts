@@ -34,13 +34,9 @@ function tokenize(line: string): string[] {
   return tokens;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: line-oriented CIF tokenizer, one branch per record type; refactor candidate (see AGENTS.md)
-function readCif(text: string): CifBlock {
-  const items = new Map<string, string>();
-  const loops: CifBlock["loops"] = [];
-  const lines = text.split(/\r?\n/);
+/** Flatten lines into a token stream, folding ;-delimited text fields into one token. */
+function flattenCifTokens(lines: readonly string[]): string[] {
   const values: string[] = [];
-  // Flatten into a token stream, folding ;-delimited text fields into one token.
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
     if (line.startsWith(";")) {
@@ -56,48 +52,99 @@ function readCif(text: string): CifBlock {
     const stripped = line.replace(/(^|\s)#.*$/, "");
     values.push(...tokenize(stripped));
   }
+  return values;
+}
+
+function readLoopTags(values: readonly string[], start: number): { tags: string[]; index: number } {
+  const tags: string[] = [];
+  let index = start;
+  while (index < values.length && (values[index] ?? "").startsWith("_")) {
+    tags.push((values[index] ?? "").toLowerCase());
+    index++;
+  }
+  return { tags, index };
+}
+
+function readLoopValues(values: readonly string[], start: number): { flat: string[]; index: number } {
+  const flat: string[] = [];
+  let index = start;
+  while (index < values.length) {
+    const v = values[index] ?? "";
+    const vl = v.toLowerCase();
+    if (v.startsWith("_") || vl === "loop_" || vl.startsWith("data_")) {
+      break;
+    }
+    flat.push(v);
+    index++;
+  }
+  return { flat, index };
+}
+
+function rowsFromFlat(tags: readonly string[], flat: readonly string[]): string[][] {
+  const rows: string[][] = [];
+  if (tags.length === 0) {
+    return rows;
+  }
+  for (let r = 0; r + tags.length <= flat.length; r += tags.length) {
+    rows.push(flat.slice(r, r + tags.length) as string[]);
+  }
+  return rows;
+}
+
+function readLoop(
+  values: readonly string[],
+  start: number,
+): {
+  loop: CifBlock["loops"][number];
+  index: number;
+} {
+  const { tags, index: afterTags } = readLoopTags(values, start);
+  const { flat, index } = readLoopValues(values, afterTags);
+  return { loop: { tags, rows: rowsFromFlat(tags, flat) }, index };
+}
+
+function consumeCifToken(
+  values: readonly string[],
+  index: number,
+  blockCount: number,
+  items: Map<string, string>,
+  loops: CifBlock["loops"],
+): { index: number; blockCount: number; stop: boolean } {
+  const token = values[index] ?? "";
+  const lower = token.toLowerCase();
+  if (lower.startsWith("data_")) {
+    const nextCount = blockCount + 1;
+    if (nextCount > 1) {
+      return { index, blockCount: nextCount, stop: true };
+    }
+    return { index: index + 1, blockCount: nextCount, stop: false };
+  }
+  if (lower === "loop_") {
+    const { loop, index: next } = readLoop(values, index + 1);
+    loops.push(loop);
+    return { index: next, blockCount, stop: false };
+  }
+  if (token.startsWith("_")) {
+    items.set(lower, values[index + 1] ?? "");
+    return { index: index + 2, blockCount, stop: false };
+  }
+  return { index: index + 1, blockCount, stop: false };
+}
+
+function readCif(text: string): CifBlock {
+  const items = new Map<string, string>();
+  const loops: CifBlock["loops"] = [];
+  const values = flattenCifTokens(text.split(/\r?\n/));
 
   let blockCount = 0;
   let index = 0;
   while (index < values.length) {
-    const token = values[index] ?? "";
-    const lower = token.toLowerCase();
-    if (lower.startsWith("data_")) {
-      blockCount++;
-      if (blockCount > 1) {
-        break;
-      }
-      index++;
-    } else if (lower === "loop_") {
-      index++;
-      const tags: string[] = [];
-      while (index < values.length && (values[index] ?? "").startsWith("_")) {
-        tags.push((values[index] ?? "").toLowerCase());
-        index++;
-      }
-      const flat: string[] = [];
-      while (index < values.length) {
-        const v = values[index] ?? "";
-        const vl = v.toLowerCase();
-        if (v.startsWith("_") || vl === "loop_" || vl.startsWith("data_")) {
-          break;
-        }
-        flat.push(v);
-        index++;
-      }
-      const rows: string[][] = [];
-      if (tags.length > 0) {
-        for (let r = 0; r + tags.length <= flat.length; r += tags.length) {
-          rows.push(flat.slice(r, r + tags.length));
-        }
-      }
-      loops.push({ tags, rows });
-    } else if (token.startsWith("_")) {
-      items.set(lower, values[index + 1] ?? "");
-      index += 2;
-    } else {
-      index++;
+    const step = consumeCifToken(values, index, blockCount, items, loops);
+    if (step.stop) {
+      break;
     }
+    index = step.index;
+    blockCount = step.blockCount;
   }
   return { items, loops };
 }

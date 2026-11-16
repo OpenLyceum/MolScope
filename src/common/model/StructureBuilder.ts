@@ -150,37 +150,64 @@ function residueKind(name: string): ResidueKindValue {
   return ResidueKind.OTHER;
 }
 
+/** Lead (CA) and guide (O) atom indices for an amino-acid residue. */
+function aminoLeadGuide(atoms: readonly Atom[], start: number, end: number): { lead: number; guide: number } {
+  let lead = -1;
+  let guide = -1;
+  for (let i = start; i < end; i++) {
+    const name = atoms[i]?.name ?? "";
+    if (name === "CA") {
+      lead = i;
+    } else if (name === "O") {
+      guide = i;
+    }
+  }
+  return { lead, guide };
+}
+
+/** Lead (P / C4′) and guide (C1′) atom indices for a nucleotide residue. */
+function nucleicLeadGuide(atoms: readonly Atom[], start: number, end: number): { lead: number; guide: number } {
+  let lead = -1;
+  let guide = -1;
+  for (let i = start; i < end; i++) {
+    const name = atoms[i]?.name ?? "";
+    if (name === "P") {
+      lead = i;
+    } else if (name === "C1'" || name === "C1*") {
+      guide = i;
+    } else if (lead < 0 && (name === "C4'" || name === "C4*")) {
+      // 5′-terminal nucleotides often lack the phosphate; C4′ stands in on the backbone.
+      lead = i;
+    }
+  }
+  return { lead, guide };
+}
+
+function leadGuideForKind(
+  kind: ResidueKindValue,
+  atoms: readonly Atom[],
+  start: number,
+  end: number,
+): { lead: number; guide: number } {
+  if (kind === ResidueKind.AMINO) {
+    return aminoLeadGuide(atoms, start, end);
+  }
+  if (kind === ResidueKind.NUCLEIC) {
+    return nucleicLeadGuide(atoms, start, end);
+  }
+  return { lead: -1, guide: -1 };
+}
+
 function buildResidues(atoms: Atom[]): Residue[] {
   const residues: Residue[] = [];
   let start = 0;
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: closes a residue with its per-kind bookkeeping in one place; refactor candidate (see AGENTS.md)
   const finish = (end: number) => {
     const first = atoms[start];
     if (!first?.residueName) {
       return;
     }
     const kind = residueKind(first.residueName);
-    let lead = -1;
-    let guide = -1;
-    for (let i = start; i < end; i++) {
-      const name = atoms[i]?.name ?? "";
-      if (kind === ResidueKind.AMINO) {
-        if (name === "CA") {
-          lead = i;
-        } else if (name === "O") {
-          guide = i;
-        }
-      } else if (kind === ResidueKind.NUCLEIC) {
-        if (name === "P") {
-          lead = i;
-        } else if (name === "C1'" || name === "C1*") {
-          guide = i;
-        } else if (lead < 0 && (name === "C4'" || name === "C4*")) {
-          // 5′-terminal nucleotides often lack the phosphate; C4′ stands in on the backbone.
-          lead = i;
-        }
-      }
-    }
+    const { lead, guide } = leadGuideForKind(kind, atoms, start, end);
     const index = residues.length;
     for (let i = start; i < end; i++) {
       const atom = atoms[i];
@@ -232,58 +259,80 @@ function applyRanges(atoms: Atom[], residues: readonly Residue[], ranges: readon
   }
 }
 
+type CaGeometry = {
+  readonly length: number;
+  dist(i: number, j: number): number;
+  sameChain(i: number, j: number): boolean;
+};
+
+/** Marks helix runs where Cα(i)–Cα(i+3) and Cα(i)–Cα(i+4) pack in the α-helix range. */
+function scoreHelices(ca: CaGeometry, kinds: SecondaryStructureValue[]): void {
+  for (let i = 0; i + 3 < ca.length; i++) {
+    if (!ca.sameChain(i, i + 3)) {
+      continue;
+    }
+    const d3 = ca.dist(i, i + 3);
+    const d4 = i + 4 < ca.length && ca.sameChain(i, i + 4) ? ca.dist(i, i + 4) : 0;
+    if (
+      d3 > STRUCTURE_BUILDER_SETTINGS.HELIX_I3_MIN_DISTANCE &&
+      d3 < STRUCTURE_BUILDER_SETTINGS.HELIX_I3_MAX_DISTANCE &&
+      d4 > STRUCTURE_BUILDER_SETTINGS.HELIX_I4_MIN_DISTANCE &&
+      d4 < STRUCTURE_BUILDER_SETTINGS.HELIX_I4_MAX_DISTANCE
+    ) {
+      for (let k = i; k <= i + 3; k++) {
+        kinds[k] = SecondaryStructure.HELIX;
+      }
+    }
+  }
+}
+
+/** Marks strand runs where Cα(i)–Cα(i+2) and Cα(i)–Cα(i+4) stretch in the β-sheet range. */
+function scoreStrands(ca: CaGeometry, kinds: SecondaryStructureValue[]): void {
+  for (let i = 0; i + 2 < ca.length; i++) {
+    if (!(ca.sameChain(i, i + 2) && kinds[i] === SecondaryStructure.NONE)) {
+      continue;
+    }
+    const d2 = ca.dist(i, i + 2);
+    const d4 = i + 4 < ca.length && ca.sameChain(i, i + 4) ? ca.dist(i, i + 4) : 0;
+    if (
+      d2 > STRUCTURE_BUILDER_SETTINGS.SHEET_I2_MIN_DISTANCE &&
+      d4 > STRUCTURE_BUILDER_SETTINGS.SHEET_I4_MIN_DISTANCE
+    ) {
+      for (let k = i; k <= i + 2; k++) {
+        if (kinds[k] === SecondaryStructure.NONE) {
+          kinds[k] = SecondaryStructure.SHEET;
+        }
+      }
+    }
+  }
+}
+
 /**
  * Fallback secondary structure from Cα geometry alone (in the spirit of Jmol's
  * `calculate structure` for files with no HELIX/SHEET records): an α-helix packs
  * Cα(i)–Cα(i+3) at about 5.0–5.6 Å, a β-strand stretches Cα(i)–Cα(i+2) to 6.4–7.0 Å.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: secondary-structure assignment from backbone geometry; refactor candidate (see AGENTS.md)
 function assignFromGeometry(atoms: Atom[], residues: readonly Residue[], positions: Float64Array): void {
-  const ca = residues.filter((r) => r.kind === ResidueKind.AMINO && r.leadAtom >= 0);
-  const dist = (i: number, j: number) => {
-    const a = ca[i]?.leadAtom ?? 0;
-    const b = ca[j]?.leadAtom ?? 0;
-    return Math.hypot(
-      (positions[3 * a] ?? 0) - (positions[3 * b] ?? 0),
-      (positions[3 * a + 1] ?? 0) - (positions[3 * b + 1] ?? 0),
-      (positions[3 * a + 2] ?? 0) - (positions[3 * b + 2] ?? 0),
-    );
+  const caResidues = residues.filter((r) => r.kind === ResidueKind.AMINO && r.leadAtom >= 0);
+  const ca: CaGeometry = {
+    length: caResidues.length,
+    dist(i: number, j: number) {
+      const a = caResidues[i]?.leadAtom ?? 0;
+      const b = caResidues[j]?.leadAtom ?? 0;
+      return Math.hypot(
+        (positions[3 * a] ?? 0) - (positions[3 * b] ?? 0),
+        (positions[3 * a + 1] ?? 0) - (positions[3 * b + 1] ?? 0),
+        (positions[3 * a + 2] ?? 0) - (positions[3 * b + 2] ?? 0),
+      );
+    },
+    sameChain(i: number, j: number) {
+      return caResidues[i]?.chain === caResidues[j]?.chain;
+    },
   };
-  const sameChain = (i: number, j: number) => ca[i]?.chain === ca[j]?.chain;
-  const kinds: SecondaryStructureValue[] = ca.map(() => SecondaryStructure.NONE);
-  for (let i = 0; i + 3 < ca.length; i++) {
-    if (sameChain(i, i + 3)) {
-      const d3 = dist(i, i + 3);
-      const d4 = i + 4 < ca.length && sameChain(i, i + 4) ? dist(i, i + 4) : 0;
-      if (
-        d3 > STRUCTURE_BUILDER_SETTINGS.HELIX_I3_MIN_DISTANCE &&
-        d3 < STRUCTURE_BUILDER_SETTINGS.HELIX_I3_MAX_DISTANCE &&
-        d4 > STRUCTURE_BUILDER_SETTINGS.HELIX_I4_MIN_DISTANCE &&
-        d4 < STRUCTURE_BUILDER_SETTINGS.HELIX_I4_MAX_DISTANCE
-      ) {
-        for (let k = i; k <= i + 3; k++) {
-          kinds[k] = SecondaryStructure.HELIX;
-        }
-      }
-    }
-  }
-  for (let i = 0; i + 2 < ca.length; i++) {
-    if (sameChain(i, i + 2) && kinds[i] === SecondaryStructure.NONE) {
-      const d2 = dist(i, i + 2);
-      const d4 = i + 4 < ca.length && sameChain(i, i + 4) ? dist(i, i + 4) : 0;
-      if (
-        d2 > STRUCTURE_BUILDER_SETTINGS.SHEET_I2_MIN_DISTANCE &&
-        d4 > STRUCTURE_BUILDER_SETTINGS.SHEET_I4_MIN_DISTANCE
-      ) {
-        for (let k = i; k <= i + 2; k++) {
-          if (kinds[k] === SecondaryStructure.NONE) {
-            kinds[k] = SecondaryStructure.SHEET;
-          }
-        }
-      }
-    }
-  }
-  ca.forEach((residue, index) => {
+  const kinds: SecondaryStructureValue[] = caResidues.map(() => SecondaryStructure.NONE);
+  scoreHelices(ca, kinds);
+  scoreStrands(ca, kinds);
+  caResidues.forEach((residue, index) => {
     const kind = kinds[index] ?? SecondaryStructure.NONE;
     for (let i = residue.firstAtom; i < residue.endAtom; i++) {
       const atom = atoms[i];

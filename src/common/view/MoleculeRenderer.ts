@@ -21,7 +21,7 @@ import { WIREFRAME_LINE } from "../model/DisplayState.js";
 import type { Vec3 } from "../model/Geometry.js";
 import type { Polyhedron } from "../model/Polyhedra.js";
 import type { Rotation3 } from "../model/Rotation3.js";
-import type { Bond } from "../model/Structure.js";
+import type { Bond, Residue, Structure } from "../model/Structure.js";
 import { ResidueKind } from "../model/Structure.js";
 import type { UnitCell } from "../model/UnitCell.js";
 import { CELL_EDGES } from "../model/UnitCell.js";
@@ -65,6 +65,15 @@ type Item = {
   color: number;
   /** Lambert brightness 0–1 for flat primitives. */
   shade: number;
+};
+
+/** Screen-space samples along a polymer path for cartoon/trace/rung drawing. */
+type PolymerProjection = {
+  projected: Float64Array;
+  factor: Float64Array;
+  nz: Float64Array;
+  gx: Float64Array;
+  gy: Float64Array;
 };
 
 export type OverlayColors = {
@@ -281,7 +290,6 @@ export class MoleculeRenderer {
     }
   }
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one canvas pass with a branch per bond style; refactor candidate (see AGENTS.md)
   private addBond(bond: Bond, input: RenderInput): void {
     const { state } = input;
     const { a, b } = bond;
@@ -308,118 +316,211 @@ export class MoleculeRenderer {
     const f = this.perspectiveFactor(((this.sz[a] ?? 0) + (this.sz[b] ?? 0)) / 2);
     const width = line ? WIRE_WIDTH : 2 * radius * this.scale * f;
     // Start each half at the sphere surface so it does not paint over the ball's face.
-    const trimA = Math.min(0.45, Math.sqrt(Math.max(0, (this.sr[a] ?? 0) ** 2 - (width / 2) ** 2)) / len);
-    const trimB = Math.min(0.45, Math.sqrt(Math.max(0, (this.sr[b] ?? 0) ** 2 - (width / 2) ** 2)) / len);
-    const order = Math.round(bond.order);
-    const multiple = order >= 2 || bond.order === 1.5 ? (bond.order === 1.5 ? 2 : order) : 1;
-    const strandWidth = multiple > 1 ? width / (line ? 1 : multiple * 0.8) : width;
-    const spacing = multiple > 1 ? Math.max(strandWidth * 1.3, line ? 3.5 : 0) : 0;
-    const px = (-dy / len) * spacing;
-    const py = (dx / len) * spacing;
-    const ca = state.colors[a] ?? 0;
-    const cb = state.colors[b] ?? 0;
-    for (let s = 0; s < multiple; s++) {
-      const offset = s - (multiple - 1) / 2;
+    const trimA = bondTrim(this.sr[a] ?? 0, width, len);
+    const trimB = bondTrim(this.sr[b] ?? 0, width, len);
+    const multiple = bondStrandCount(bond.order, Math.round(bond.order));
+    const { strandWidth, spacing } = bondStrandLayout(width, multiple, line);
+    this.addBondStrands(bond, a, b, {
+      ax,
+      ay,
+      bx,
+      by,
+      dx,
+      dy,
+      len,
+      trimA,
+      trimB,
+      line,
+      multiple,
+      strandWidth,
+      spacing,
+      ca: state.colors[a] ?? 0,
+      cb: state.colors[b] ?? 0,
+    });
+  }
+
+  /** Pushes wire/stick strands for one bond (single colour or split mid-bond). */
+  private addBondStrands(
+    bond: Bond,
+    a: number,
+    b: number,
+    g: {
+      ax: number;
+      ay: number;
+      bx: number;
+      by: number;
+      dx: number;
+      dy: number;
+      len: number;
+      trimA: number;
+      trimB: number;
+      line: boolean;
+      multiple: number;
+      strandWidth: number;
+      spacing: number;
+      ca: number;
+      cb: number;
+    },
+  ): void {
+    const px = (-g.dy / g.len) * g.spacing;
+    const py = (g.dx / g.len) * g.spacing;
+    const kind = g.line ? Kind.LINE : Kind.CYLINDER;
+    const za = this.sz[a] ?? 0;
+    const zb = this.sz[b] ?? 0;
+    for (let s = 0; s < g.multiple; s++) {
+      const offset = s - (g.multiple - 1) / 2;
       const ox = px * offset;
       const oy = py * offset;
-      const x1 = ax + dx * trimA + ox;
-      const y1 = ay + dy * trimA + oy;
-      const x2 = bx - dx * trimB + ox;
-      const y2 = by - dy * trimB + oy;
-      const mx = (ax + bx) / 2 + ox;
-      const my = (ay + by) / 2 + oy;
-      const kind = line ? Kind.LINE : Kind.CYLINDER;
+      const x1 = g.ax + g.dx * g.trimA + ox;
+      const y1 = g.ay + g.dy * g.trimA + oy;
+      const x2 = g.bx - g.dx * g.trimB + ox;
+      const y2 = g.by - g.dy * g.trimB + oy;
+      const mx = (g.ax + g.bx) / 2 + ox;
+      const my = (g.ay + g.by) / 2 + oy;
       // The second strand of an aromatic bond is drawn thinner, like Jmol's dashed partial bond.
-      const w = bond.order === 1.5 && s === 1 ? strandWidth * 0.55 : strandWidth;
-      if (ca === cb) {
-        const it = this.item(kind, ((this.sz[a] ?? 0) + (this.sz[b] ?? 0)) / 2);
-        Object.assign(it, { x1, y1, x2, y2, size: w, color: ca });
-      } else {
-        const h1 = this.item(kind, (3 * (this.sz[a] ?? 0) + (this.sz[b] ?? 0)) / 4);
-        Object.assign(h1, { x1, y1, x2: mx, y2: my, size: w, color: ca });
-        const h2 = this.item(kind, ((this.sz[a] ?? 0) + 3 * (this.sz[b] ?? 0)) / 4);
-        Object.assign(h2, { x1: mx, y1: my, x2, y2, size: w, color: cb });
-      }
+      const w = bond.order === 1.5 && s === 1 ? g.strandWidth * 0.55 : g.strandWidth;
+      this.pushBondStrand(kind, g.ca, g.cb, za, zb, x1, y1, x2, y2, mx, my, w);
     }
   }
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one canvas pass with a branch per polymer style; refactor candidate (see AGENTS.md)
+  private pushBondStrand(
+    kind: number,
+    ca: number,
+    cb: number,
+    za: number,
+    zb: number,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    mx: number,
+    my: number,
+    w: number,
+  ): void {
+    if (ca === cb) {
+      const it = this.item(kind, (za + zb) / 2);
+      Object.assign(it, { x1, y1, x2, y2, size: w, color: ca });
+      return;
+    }
+    const h1 = this.item(kind, (3 * za + zb) / 4);
+    Object.assign(h1, { x1, y1, x2: mx, y2: my, size: w, color: ca });
+    const h2 = this.item(kind, (za + 3 * zb) / 4);
+    Object.assign(h2, { x1: mx, y1: my, x2, y2, size: w, color: cb });
+  }
+
   private addPolymers(input: RenderInput): void {
-    const { state } = input;
-    const structure = state.structure;
     for (const path of input.paths) {
-      const count = path.halfWidths.length;
-      const projected = new Float64Array(3 * count);
-      const factor = new Float64Array(count);
-      const nz = new Float64Array(count);
-      const gx = new Float64Array(count);
-      const gy = new Float64Array(count);
-      const v: Vec3 = [0, 0, 0];
-      for (let s = 0; s < count; s++) {
-        input.rotation.apply(
-          (path.points[3 * s] ?? 0) - input.center[0],
-          (path.points[3 * s + 1] ?? 0) - input.center[1],
-          (path.points[3 * s + 2] ?? 0) - input.center[2],
-          v,
-        );
-        const f = this.perspectiveFactor(v[2]);
-        factor[s] = f;
-        projected[3 * s] = this.cx + v[0] * this.scale * f;
-        projected[3 * s + 1] = this.cy - v[1] * this.scale * f;
-        projected[3 * s + 2] = v[2];
-        input.rotation.apply(path.guides[3 * s] ?? 0, path.guides[3 * s + 1] ?? 0, path.guides[3 * s + 2] ?? 0, v);
-        gx[s] = v[0];
-        gy[s] = -v[1];
-        input.rotation.apply(path.normals[3 * s] ?? 0, path.normals[3 * s + 1] ?? 0, path.normals[3 * s + 2] ?? 0, v);
-        nz[s] = v[2];
-      }
-      for (let s = 0; s + 1 < count; s++) {
-        const residue = structure.residues[path.residues[s] ?? 0];
-        const lead = residue?.leadAtom ?? -1;
-        if (lead < 0 || state.hidden[lead]) {
-          continue;
-        }
-        const cartoon = state.cartoon[lead] === 1;
-        const trace = state.trace[lead] === 1;
-        if (!(cartoon || trace)) {
-          continue;
-        }
-        const color = state.colors[lead] ?? 0xffffff;
-        const x1 = projected[3 * s] ?? 0;
-        const y1 = projected[3 * s + 1] ?? 0;
-        const x2 = projected[3 * s + 3] ?? 0;
-        const y2 = projected[3 * s + 4] ?? 0;
-        const z = ((projected[3 * s + 2] ?? 0) + (projected[3 * s + 5] ?? 0)) / 2;
-        const w1 = cartoon ? (path.halfWidths[s] ?? 0) : 0;
-        const w2 = cartoon ? (path.halfWidths[s + 1] ?? 0) : 0;
-        if (w1 > 0 || w2 > 0) {
-          const k1 = Math.max(w1, TUBE_RADIUS) * this.scale * (factor[s] ?? 1);
-          const k2 = Math.max(w2, TUBE_RADIUS) * this.scale * (factor[s + 1] ?? 1);
-          const it = this.item(Kind.QUAD, z);
-          it.x1 = x1 + (gx[s] ?? 0) * k1;
-          it.y1 = y1 + (gy[s] ?? 0) * k1;
-          it.x2 = x2 + (gx[s + 1] ?? 0) * k2;
-          it.y2 = y2 + (gy[s + 1] ?? 0) * k2;
-          it.x3 = x2 - (gx[s + 1] ?? 0) * k2;
-          it.y3 = y2 - (gy[s + 1] ?? 0) * k2;
-          it.x4 = x1 - (gx[s] ?? 0) * k1;
-          it.y4 = y1 - (gy[s] ?? 0) * k1;
-          it.color = color;
-          it.shade = 0.35 + 0.65 * Math.abs(((nz[s] ?? 0) + (nz[s + 1] ?? 0)) / 2);
-        } else {
-          const it = this.item(Kind.TUBE, z);
-          Object.assign(it, { x1, y1, x2, y2, size: 2 * TUBE_RADIUS * this.scale * (factor[s] ?? 1), color });
-        }
-      }
+      const proj = this.projectPolymerPath(path, input);
+      this.addPolymerSegments(path, proj, input);
       if (path.isNucleic) {
-        this.addNucleicRungs(path, projected, input);
+        this.addNucleicRungs(path, proj.projected, input);
       }
     }
     this.addBackboneSticks(input);
   }
 
+  /** Screen-space samples along a polymer path (points, perspective factors, guides, normals). */
+  private projectPolymerPath(path: PolymerPath, input: RenderInput): PolymerProjection {
+    const count = path.halfWidths.length;
+    const projected = new Float64Array(3 * count);
+    const factor = new Float64Array(count);
+    const nz = new Float64Array(count);
+    const gx = new Float64Array(count);
+    const gy = new Float64Array(count);
+    const v: Vec3 = [0, 0, 0];
+    for (let s = 0; s < count; s++) {
+      input.rotation.apply(
+        (path.points[3 * s] ?? 0) - input.center[0],
+        (path.points[3 * s + 1] ?? 0) - input.center[1],
+        (path.points[3 * s + 2] ?? 0) - input.center[2],
+        v,
+      );
+      const f = this.perspectiveFactor(v[2]);
+      factor[s] = f;
+      projected[3 * s] = this.cx + v[0] * this.scale * f;
+      projected[3 * s + 1] = this.cy - v[1] * this.scale * f;
+      projected[3 * s + 2] = v[2];
+      input.rotation.apply(path.guides[3 * s] ?? 0, path.guides[3 * s + 1] ?? 0, path.guides[3 * s + 2] ?? 0, v);
+      gx[s] = v[0];
+      gy[s] = -v[1];
+      input.rotation.apply(path.normals[3 * s] ?? 0, path.normals[3 * s + 1] ?? 0, path.normals[3 * s + 2] ?? 0, v);
+      nz[s] = v[2];
+    }
+    return { projected, factor, nz, gx, gy };
+  }
+
+  /** Cartoon ribbons (QUAD) or thin tubes (TUBE) between consecutive path samples. */
+  private addPolymerSegments(path: PolymerPath, proj: PolymerProjection, input: RenderInput): void {
+    const count = path.halfWidths.length;
+    for (let s = 0; s + 1 < count; s++) {
+      this.addOnePolymerSegment(path, proj, input, s);
+    }
+  }
+
+  private addOnePolymerSegment(path: PolymerPath, proj: PolymerProjection, input: RenderInput, s: number): void {
+    const { state } = input;
+    const residue = state.structure.residues[path.residues[s] ?? 0];
+    const lead = residue?.leadAtom ?? -1;
+    if (lead < 0 || state.hidden[lead]) {
+      return;
+    }
+    const cartoon = state.cartoon[lead] === 1;
+    const trace = state.trace[lead] === 1;
+    if (!(cartoon || trace)) {
+      return;
+    }
+    const { projected, factor, nz, gx, gy } = proj;
+    const color = state.colors[lead] ?? 0xffffff;
+    const x1 = projected[3 * s] ?? 0;
+    const y1 = projected[3 * s + 1] ?? 0;
+    const x2 = projected[3 * s + 3] ?? 0;
+    const y2 = projected[3 * s + 4] ?? 0;
+    const z = ((projected[3 * s + 2] ?? 0) + (projected[3 * s + 5] ?? 0)) / 2;
+    const w1 = cartoon ? (path.halfWidths[s] ?? 0) : 0;
+    const w2 = cartoon ? (path.halfWidths[s + 1] ?? 0) : 0;
+    if (w1 > 0 || w2 > 0) {
+      this.pushCartoonQuad(x1, y1, x2, y2, z, color, w1, w2, s, factor, gx, gy, nz);
+      return;
+    }
+    this.pushTraceTube(x1, y1, x2, y2, z, color, factor[s] ?? 1);
+  }
+
+  private pushCartoonQuad(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    z: number,
+    color: number,
+    w1: number,
+    w2: number,
+    s: number,
+    factor: Float64Array,
+    gx: Float64Array,
+    gy: Float64Array,
+    nz: Float64Array,
+  ): void {
+    const k1 = Math.max(w1, TUBE_RADIUS) * this.scale * (factor[s] ?? 1);
+    const k2 = Math.max(w2, TUBE_RADIUS) * this.scale * (factor[s + 1] ?? 1);
+    const it = this.item(Kind.QUAD, z);
+    it.x1 = x1 + (gx[s] ?? 0) * k1;
+    it.y1 = y1 + (gy[s] ?? 0) * k1;
+    it.x2 = x2 + (gx[s + 1] ?? 0) * k2;
+    it.y2 = y2 + (gy[s + 1] ?? 0) * k2;
+    it.x3 = x2 - (gx[s + 1] ?? 0) * k2;
+    it.y3 = y2 - (gy[s + 1] ?? 0) * k2;
+    it.x4 = x1 - (gx[s] ?? 0) * k1;
+    it.y4 = y1 - (gy[s] ?? 0) * k1;
+    it.color = color;
+    it.shade = 0.35 + 0.65 * Math.abs(((nz[s] ?? 0) + (nz[s + 1] ?? 0)) / 2);
+  }
+
+  private pushTraceTube(x1: number, y1: number, x2: number, y2: number, z: number, color: number, f: number): void {
+    const it = this.item(Kind.TUBE, z);
+    Object.assign(it, { x1, y1, x2, y2, size: 2 * TUBE_RADIUS * this.scale * f, color });
+  }
+
   /** Base "ladder rungs" from the backbone to N1 (purines) or N3 (pyrimidines), as in Jmol cartoons. */
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one canvas pass over the nucleic-acid rungs; refactor candidate (see AGENTS.md)
   private addNucleicRungs(path: PolymerPath, projected: Float64Array, input: RenderInput): void {
     const { state } = input;
     const structure = state.structure;
@@ -434,13 +535,7 @@ export class MoleculeRenderer {
       if (!residue || residue.leadAtom < 0 || !state.cartoon[residue.leadAtom] || state.hidden[residue.leadAtom]) {
         continue;
       }
-      const purine = /G|A|I/.test(residue.name.toUpperCase());
-      let target = -1;
-      for (let i = residue.firstAtom; i < residue.endAtom; i++) {
-        if (structure.atoms[i]?.name === (purine ? "N1" : "N3")) {
-          target = i;
-        }
-      }
+      const target = findNucleicRungTarget(residue, structure);
       if (target < 0) {
         continue;
       }
@@ -509,7 +604,6 @@ export class MoleculeRenderer {
     }
   }
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one canvas pass with a branch per polyhedron face; refactor candidate (see AGENTS.md)
   private addPolyhedra(polyhedra: readonly Polyhedron[], input: RenderInput): void {
     const { state, positions, rotation } = input;
     const v1: Vec3 = [0, 0, 0];
@@ -518,33 +612,31 @@ export class MoleculeRenderer {
         continue;
       }
       const color = state.colors[polyhedron.center] ?? 0xffffff;
-      for (const [a, b, c] of polyhedron.faces) {
-        const it = this.item(Kind.FACE, ((this.sz[a] ?? 0) + (this.sz[b] ?? 0) + (this.sz[c] ?? 0)) / 3);
-        Object.assign(it, {
-          x1: this.sx[a] ?? 0,
-          y1: this.sy[a] ?? 0,
-          x2: this.sx[b] ?? 0,
-          y2: this.sy[b] ?? 0,
-          x3: this.sx[c] ?? 0,
-          y3: this.sy[c] ?? 0,
-          color,
-        });
-        const u: Vec3 = [
-          (positions[3 * b] ?? 0) - (positions[3 * a] ?? 0),
-          (positions[3 * b + 1] ?? 0) - (positions[3 * a + 1] ?? 0),
-          (positions[3 * b + 2] ?? 0) - (positions[3 * a + 2] ?? 0),
-        ];
-        const w: Vec3 = [
-          (positions[3 * c] ?? 0) - (positions[3 * a] ?? 0),
-          (positions[3 * c + 1] ?? 0) - (positions[3 * a + 1] ?? 0),
-          (positions[3 * c + 2] ?? 0) - (positions[3 * a + 2] ?? 0),
-        ];
-        const n: Vec3 = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
-        const len = Math.hypot(...n) || 1;
-        rotation.apply(n[0] / len, n[1] / len, n[2] / len, v1);
-        it.shade = 0.45 + 0.55 * Math.abs(v1[2]);
+      for (const face of polyhedron.faces) {
+        this.pushPolyhedronFace(face, color, positions, rotation, v1);
       }
     }
+  }
+
+  private pushPolyhedronFace(
+    face: readonly [number, number, number],
+    color: number,
+    positions: Float64Array,
+    rotation: Rotation3,
+    scratch: Vec3,
+  ): void {
+    const [a, b, c] = face;
+    const it = this.item(Kind.FACE, ((this.sz[a] ?? 0) + (this.sz[b] ?? 0) + (this.sz[c] ?? 0)) / 3);
+    Object.assign(it, {
+      x1: this.sx[a] ?? 0,
+      y1: this.sy[a] ?? 0,
+      x2: this.sx[b] ?? 0,
+      y2: this.sy[b] ?? 0,
+      x3: this.sx[c] ?? 0,
+      y3: this.sy[c] ?? 0,
+      color,
+    });
+    it.shade = faceShade(a, b, c, positions, rotation, scratch);
   }
 
   // ── Painting ─────────────────────────────────────────────────────────────────
@@ -704,11 +796,17 @@ export class MoleculeRenderer {
     ctx.restore();
   }
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one canvas pass draws every overlay type; refactor candidate (see AGENTS.md)
   private paintOverlays(ctx: CanvasRenderingContext2D, input: RenderInput): void {
+    ctx.save();
+    this.paintHalos(ctx, input);
+    this.paintAtomLabels(ctx, input);
+    this.paintMeasurements(ctx, input);
+    ctx.restore();
+  }
+
+  private paintHalos(ctx: CanvasRenderingContext2D, input: RenderInput): void {
     const { state, colors } = input;
     const n = state.atomCount;
-    ctx.save();
     if (input.showHalos) {
       ctx.strokeStyle = colors.halo;
       ctx.lineWidth = MOLECULE_RENDERER_SETTINGS.PAINT_OVERLAYS_LINE_WIDTH;
@@ -732,46 +830,50 @@ export class MoleculeRenderer {
       this.ring(ctx, input.hovered, 6);
       ctx.setLineDash([]);
     }
+  }
 
-    // Labels sit to the upper right of their atom.
+  /** Labels sit to the upper right of their atom. */
+  private paintAtomLabels(ctx: CanvasRenderingContext2D, input: RenderInput): void {
+    const { state, colors } = input;
     ctx.font = input.font;
     ctx.fillStyle = colors.label;
     ctx.textBaseline = "bottom";
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < state.atomCount; i++) {
       const label = state.labels[i];
       if (label && !state.hidden[i]) {
         const r = Math.max(this.sr[i] ?? 0, 3) * 0.7;
         ctx.fillText(label, (this.sx[i] ?? 0) + r + 1, (this.sy[i] ?? 0) - r - 1);
       }
     }
+  }
 
-    // Measurements: dashed polyline through the atoms, value at the middle.
+  /** Measurements: dashed polyline through the atoms, value at the middle. */
+  private paintMeasurements(ctx: CanvasRenderingContext2D, input: RenderInput): void {
+    const { colors } = input;
     ctx.strokeStyle = colors.measurement;
     ctx.fillStyle = colors.measurement;
     ctx.lineWidth = MOLECULE_RENDERER_SETTINGS.LINE_WIDTH;
     ctx.textBaseline = "middle";
     for (const measurement of input.measurements) {
-      const pts = measurement.atoms.map((i) => [this.sx[i] ?? 0, this.sy[i] ?? 0] as const);
-      ctx.setLineDash([5, 4]);
-      ctx.beginPath();
-      for (const [k, [x, y]] of pts.entries()) {
-        if (k === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-      }
-      ctx.stroke();
-      ctx.setLineDash([]);
-      const mid =
-        pts.length === 2
-          ? [((pts[0]?.[0] ?? 0) + (pts[1]?.[0] ?? 0)) / 2, ((pts[0]?.[1] ?? 0) + (pts[1]?.[1] ?? 0)) / 2]
-          : pts.length === 3
-            ? [pts[1]?.[0] ?? 0, pts[1]?.[1] ?? 0]
-            : [((pts[1]?.[0] ?? 0) + (pts[2]?.[0] ?? 0)) / 2, ((pts[1]?.[1] ?? 0) + (pts[2]?.[1] ?? 0)) / 2];
-      ctx.fillText(input.measurementLabel(measurement), (mid[0] ?? 0) + 6, (mid[1] ?? 0) - 8);
+      this.paintOneMeasurement(ctx, measurement, input);
     }
-    ctx.restore();
+  }
+
+  private paintOneMeasurement(ctx: CanvasRenderingContext2D, measurement: Measurement, input: RenderInput): void {
+    const pts = measurement.atoms.map((i) => [this.sx[i] ?? 0, this.sy[i] ?? 0] as const);
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    for (const [k, [x, y]] of pts.entries()) {
+      if (k === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const mid = measurementLabelPoint(pts);
+    ctx.fillText(input.measurementLabel(measurement), mid[0] + 6, mid[1] - 8);
   }
 
   private ring(ctx: CanvasRenderingContext2D, i: number, pad: number): void {
@@ -876,4 +978,75 @@ function lighten(color: number, amount: number): number {
     (Math.round(g + (255 - g) * amount) << 8) |
     Math.round(b + (255 - b) * amount)
   );
+}
+
+/** Double/triple/aromatic strand count for a bond order. */
+function bondStrandCount(order: number, rounded: number): number {
+  if (order === 1.5) {
+    return 2;
+  }
+  return rounded >= 2 ? rounded : 1;
+}
+
+/** Fraction of bond length to skip so a stick starts at the atom sphere surface. */
+function bondTrim(sphereRadius: number, width: number, len: number): number {
+  return Math.min(0.45, Math.sqrt(Math.max(0, sphereRadius ** 2 - (width / 2) ** 2)) / len);
+}
+
+/** Per-strand width and lateral spacing for multi-order bonds. */
+function bondStrandLayout(width: number, multiple: number, line: boolean): { strandWidth: number; spacing: number } {
+  if (multiple <= 1) {
+    return { strandWidth: width, spacing: 0 };
+  }
+  const strandWidth = width / (line ? 1 : multiple * 0.8);
+  return { strandWidth, spacing: Math.max(strandWidth * 1.3, line ? 3.5 : 0) };
+}
+
+/** N1 (purines) or N3 (pyrimidines) index for a nucleic rung, or -1. */
+function findNucleicRungTarget(residue: Residue, structure: Structure): number {
+  const purine = /G|A|I/.test(residue.name.toUpperCase());
+  const name = purine ? "N1" : "N3";
+  let target = -1;
+  for (let i = residue.firstAtom; i < residue.endAtom; i++) {
+    if (structure.atoms[i]?.name === name) {
+      target = i;
+    }
+  }
+  return target;
+}
+
+/** Lambert shade for a triangular face from model-space positions. */
+function faceShade(
+  a: number,
+  b: number,
+  c: number,
+  positions: Float64Array,
+  rotation: Rotation3,
+  scratch: Vec3,
+): number {
+  const u: Vec3 = [
+    (positions[3 * b] ?? 0) - (positions[3 * a] ?? 0),
+    (positions[3 * b + 1] ?? 0) - (positions[3 * a + 1] ?? 0),
+    (positions[3 * b + 2] ?? 0) - (positions[3 * a + 2] ?? 0),
+  ];
+  const w: Vec3 = [
+    (positions[3 * c] ?? 0) - (positions[3 * a] ?? 0),
+    (positions[3 * c + 1] ?? 0) - (positions[3 * a + 1] ?? 0),
+    (positions[3 * c + 2] ?? 0) - (positions[3 * a + 2] ?? 0),
+  ];
+  const n: Vec3 = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+  const len = Math.hypot(...n) || 1;
+  rotation.apply(n[0] / len, n[1] / len, n[2] / len, scratch);
+  return 0.45 + 0.55 * Math.abs(scratch[2]);
+}
+
+/** Screen point for a measurement value label (mid-edge, vertex, or mid of middle edge). */
+function measurementLabelPoint(pts: readonly (readonly [number, number])[]): [number, number] {
+  if (pts.length === 2) {
+    return [((pts[0]?.[0] ?? 0) + (pts[1]?.[0] ?? 0)) / 2, ((pts[0]?.[1] ?? 0) + (pts[1]?.[1] ?? 0)) / 2];
+  }
+  if (pts.length === 3) {
+    return [pts[1]?.[0] ?? 0, pts[1]?.[1] ?? 0];
+  }
+  return [((pts[1]?.[0] ?? 0) + (pts[2]?.[0] ?? 0)) / 2, ((pts[1]?.[1] ?? 0) + (pts[2]?.[1] ?? 0)) / 2];
 }

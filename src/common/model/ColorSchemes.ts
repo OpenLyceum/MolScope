@@ -7,7 +7,7 @@
  * Colours are 0xRRGGBB integers so this module stays free of Scenery.
  */
 
-import type { Structure } from "./Structure.js";
+import type { Atom, Residue, Structure } from "./Structure.js";
 import { ResidueKind, SecondaryStructure } from "./Structure.js";
 
 export const ColorScheme = {
@@ -207,43 +207,61 @@ export function applyColorScheme(
     }
   }
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one branch per color scheme for each atom; refactor candidate (see AGENTS.md)
   atoms.forEach((atom, i) => {
     if (!mask[i]) {
       return;
     }
-    const residue = structure.residues[atom.residueIndex];
-    let color = atom.element.color;
-    switch (scheme) {
-      case ColorScheme.CHAIN:
-        color = atom.chain ? chainColor(atom.chain) : color;
-        break;
-      case ColorScheme.STRUCTURE:
-        if (residue?.kind === ResidueKind.NUCLEIC) {
-          color = NUCLEIC_STRUCTURE_COLOR;
-        } else if (residue?.kind === ResidueKind.AMINO) {
-          color = STRUCTURE_COLORS[atom.secondaryStructure] ?? 0xffffff;
-        }
-        break;
-      case ColorScheme.TEMPERATURE:
-        color = temperatureColor(maxB > minB ? (atom.bFactor - minB) / (maxB - minB) : 0.5);
-        break;
-      case ColorScheme.AMINO:
-        if (residue && (residue.kind === ResidueKind.AMINO || residue.kind === ResidueKind.NUCLEIC)) {
-          color = AMINO_COLORS[residue.name.toUpperCase()] ?? AMINO_DEFAULT;
-        }
-        break;
-      case ColorScheme.GROUP:
-        if (residue && (residue.kind === ResidueKind.AMINO || residue.kind === ResidueKind.NUCLEIC)) {
-          color = rainbow(groupFraction[atom.residueIndex] ?? 0);
-        }
-        break;
-      case ColorScheme.CHARGE:
-        color = atom.formalCharge > 0 ? 0x3050f8 : atom.formalCharge < 0 ? 0xff0d0d : 0xffffff;
-        break;
-      default:
-        break;
-    }
-    colors[i] = color;
+    colors[i] = resolveSchemeColor(scheme, atom, structure.residues[atom.residueIndex], minB, maxB, groupFraction);
   });
+}
+
+/** Per-scheme colour for one atom; falls back to the element (CPK) colour. */
+function resolveSchemeColor(
+  scheme: ColorSchemeValue,
+  atom: Atom,
+  residue: Residue | undefined,
+  minB: number,
+  maxB: number,
+  groupFraction: Float64Array,
+): number {
+  switch (scheme) {
+    case ColorScheme.CHAIN:
+      return atom.chain ? chainColor(atom.chain) : atom.element.color;
+    case ColorScheme.STRUCTURE:
+      return structureSchemeColor(atom, residue);
+    case ColorScheme.TEMPERATURE:
+      return temperatureColor(maxB > minB ? (atom.bFactor - minB) / (maxB - minB) : 0.5);
+    case ColorScheme.AMINO:
+      return aminoSchemeColor(residue) ?? atom.element.color;
+    case ColorScheme.GROUP:
+      return groupSchemeColor(atom, residue, groupFraction) ?? atom.element.color;
+    case ColorScheme.CHARGE:
+      return atom.formalCharge > 0 ? 0x3050f8 : atom.formalCharge < 0 ? 0xff0d0d : 0xffffff;
+    default:
+      return atom.element.color;
+  }
+}
+
+function structureSchemeColor(atom: Atom, residue: Residue | undefined): number {
+  if (residue?.kind === ResidueKind.NUCLEIC) {
+    return NUCLEIC_STRUCTURE_COLOR;
+  }
+  if (residue?.kind === ResidueKind.AMINO) {
+    return STRUCTURE_COLORS[atom.secondaryStructure] ?? 0xffffff;
+  }
+  return atom.element.color;
+}
+
+function aminoSchemeColor(residue: Residue | undefined): number | null {
+  if (residue && (residue.kind === ResidueKind.AMINO || residue.kind === ResidueKind.NUCLEIC)) {
+    return AMINO_COLORS[residue.name.toUpperCase()] ?? AMINO_DEFAULT;
+  }
+  return null;
+}
+
+function groupSchemeColor(atom: Atom, residue: Residue | undefined, groupFraction: Float64Array): number | null {
+  if (residue && (residue.kind === ResidueKind.AMINO || residue.kind === ResidueKind.NUCLEIC)) {
+    return rainbow(groupFraction[atom.residueIndex] ?? 0);
+  }
+  return null;
 }
