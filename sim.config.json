@@ -1,0 +1,10 @@
+{
+  "$comment": "Per-sim build settings, read and validated by vite.config.ts (template-owned). Unknown keys or bad values fail the build. See AGENTS.md → Build configuration.",
+  "title": "MolScope",
+  "shortName": "MolScope",
+  "themeColor": "#1a1a2e",
+  "backgroundColor": "#000000",
+  "allowPermissions": [],
+  "connectSrc": ["https://pubchem.ncbi.nlm.nih.gov", "https://files.rcsb.org"],
+  "precacheExtensions": []
+}
