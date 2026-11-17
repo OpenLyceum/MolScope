@@ -81,8 +81,9 @@ the same `ViewerModel` operations, which edit those arrays for the selected atom
 
 ## Compliance carve-outs
 
-- `vite.config.ts`: CSP `connect-src` adds `https://pubchem.ncbi.nlm.nih.gov` and
-  `https://files.rcsb.org` so the dev/preview servers allow `load $name` and `load =pdbid`.
+- **CSP `connect-src`:** `sim.config.json` → `connectSrc` adds `https://pubchem.ncbi.nlm.nih.gov`
+  and `https://files.rcsb.org` so the dev/preview servers allow `load $name` and `load =pdbid`
+  (`vite.config.ts` itself is the template's copy).
 - **Data colours outside `MolScopeColors.ts`.** Atom and residue colours are scientific data,
   not theme: Jmol's CPK table in `Elements.ts` and the chain/structure/amino palettes and colour
   names in `ColorSchemes.ts` (script `color` arguments). `MolScopeScreenIcons.ts` reuses those
