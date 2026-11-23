@@ -55,10 +55,10 @@ export class ViewerControlPanel extends MolScopePanel {
     const info = strings.getInfo();
     const a11y = strings.getCommonA11yStrings();
     const names = strings.getLibraryNames() as unknown as Record<string, Property<string>>;
-    const groupNames = strings.getGroups() as unknown as Record<string, Property<string>>;
-    const styleNames = strings.getStyles() as unknown as Record<string, Property<string>>;
-    const schemeNames = strings.getColorSchemes() as unknown as Record<string, Property<string>>;
-    const labelNames = strings.getLabelModes() as unknown as Record<string, Property<string>>;
+    const groupNames = strings.getGroups();
+    const styleNames = strings.getStyles();
+    const schemeNames = strings.getColorSchemes();
+    const labelNames = strings.getLabelModes();
     const inner = options.width - 24;
     const column = (inner - 8) / 2;
     const disposers: (() => void)[] = [];

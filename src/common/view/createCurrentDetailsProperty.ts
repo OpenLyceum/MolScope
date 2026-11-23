@@ -5,7 +5,7 @@
  * "Caffeine: 24 atoms, Ball & Stick style, colored by Element (CPK)."
  */
 
-import { DerivedProperty, type Property, type TReadOnlyProperty } from "scenerystack/axon";
+import { DerivedProperty, type TReadOnlyProperty } from "scenerystack/axon";
 import { StringUtils } from "scenerystack/phetcommon";
 import { StringManager } from "../../i18n/StringManager.js";
 import type { ViewerModel } from "../model/ViewerModel.js";
@@ -14,8 +14,8 @@ import { structureDisplayName } from "./formatters.js";
 export function createCurrentDetailsProperty(model: ViewerModel): TReadOnlyProperty<string> {
   const strings = StringManager.getInstance();
   const a11y = strings.getCommonA11yStrings();
-  const styles = strings.getStyles() as unknown as Record<string, Property<string>>;
-  const schemes = strings.getColorSchemes() as unknown as Record<string, Property<string>>;
+  const styles = strings.getStyles();
+  const schemes = strings.getColorSchemes();
   return DerivedProperty.deriveAny(
     [
       model.structureProperty,
