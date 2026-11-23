@@ -8,7 +8,7 @@ import { STRUCTURE_INFO_PANEL_SETTINGS } from "../../MolScopeConstants.js";
  * commands and clicks update it the same way.
  */
 
-import { Multilink, type Property } from "scenerystack/axon";
+import { Multilink } from "scenerystack/axon";
 import { toFixed } from "scenerystack/dot";
 import { StringUtils } from "scenerystack/phetcommon";
 import { HBox, HSeparator, RichText, Text, VBox } from "scenerystack/scenery";
@@ -41,8 +41,8 @@ export class StructureInfoPanel extends MolScopePanel {
     const strings = StringManager.getInstance();
     const info = strings.getInfo();
     const controls = strings.getControls();
-    const hints = strings.getHints() as unknown as Record<string, Property<string>>;
-    const modeNames = strings.getPickingModes() as unknown as Record<string, Property<string>>;
+    const hints = strings.getHints();
+    const modeNames = strings.getPickingModes();
     const inner = width - 24;
 
     const titleText = new RichText("", {
@@ -61,7 +61,7 @@ export class StructureInfoPanel extends MolScopePanel {
 
     const modeGroup = radioGroup(
       model.pickingModeProperty,
-      modes.map((m) => ({ value: m, label: modeNames[`${m}StringProperty`] ?? controls.mouseStringProperty })),
+      modes.map((mode) => ({ value: mode, label: modeNames[`${mode}StringProperty`] })),
       strings.getCommonA11yStrings().pickingModeStringProperty,
       inner - 20,
     );
@@ -116,7 +116,7 @@ export class StructureInfoPanel extends MolScopePanel {
 
     const updatePicking = () => {
       const mode = model.pickingModeProperty.value;
-      hintText.string = escapeHtml(hints[`${mode}StringProperty`]?.value ?? "");
+      hintText.string = escapeHtml(hints[`${mode}StringProperty`].value);
       const structure = model.structure;
       const needed = NEEDED_PICKS[mode];
       const pending = model.pendingPicksProperty.value;
