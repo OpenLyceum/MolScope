@@ -21,7 +21,7 @@ const MAX_TITLE_LENGTH: number = FORMATTERS_SETTINGS.MAX_TITLE_LENGTH;
 /** The localised library name when the structure came from the library, else the file's own title. */
 export function structureDisplayName(model: ViewerModel): string {
   const entry = libraryEntry(model.entryIdProperty.value);
-  const names = StringManager.getInstance().getLibraryNames() as unknown as Record<string, TReadOnlyProperty<string>>;
+  const names: Readonly<Record<string, TReadOnlyProperty<string>>> = StringManager.getInstance().getLibraryNames();
   const name = entry ? names[`${entry.nameKey}StringProperty`]?.value : undefined;
   const title = name ?? model.structure?.title ?? "";
   return title.length > MAX_TITLE_LENGTH ? `${title.slice(0, MAX_TITLE_LENGTH - 1)}…` : title;

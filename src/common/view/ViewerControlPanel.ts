@@ -8,7 +8,14 @@ import { VIEWER_CONTROL_PANEL_SETTINGS } from "../../MolScopeConstants.js";
  * operations as the script console.
  */
 
-import { DerivedProperty, Multilink, NumberProperty, PatternStringProperty, Property } from "scenerystack/axon";
+import {
+  DerivedProperty,
+  Multilink,
+  NumberProperty,
+  PatternStringProperty,
+  Property,
+  type TReadOnlyProperty,
+} from "scenerystack/axon";
 import { StringUtils } from "scenerystack/phetcommon";
 import { HBox, HSeparator, Node, RichText, Text, VBox } from "scenerystack/scenery";
 import { AquaRadioButtonGroup, ArrowButton } from "scenerystack/sun";
@@ -54,7 +61,7 @@ export class ViewerControlPanel extends MolScopePanel {
     const controls = strings.getControls();
     const info = strings.getInfo();
     const a11y = strings.getCommonA11yStrings();
-    const names = strings.getLibraryNames() as unknown as Record<string, Property<string>>;
+    const names: Readonly<Record<string, TReadOnlyProperty<string>>> = strings.getLibraryNames();
     const groupNames = strings.getGroups();
     const styleNames = strings.getStyles();
     const schemeNames = strings.getColorSchemes();

@@ -22,7 +22,6 @@ import type { Bounds2 } from "scenerystack/dot";
 import { Vector2 } from "scenerystack/dot";
 import {
   CanvasNode,
-  type Color,
   KeyboardListener,
   Node,
   type NodeOptions,
@@ -60,23 +59,10 @@ class MoleculeCanvasNode extends CanvasNode {
   private readonly model: ViewerModel;
   private paths: PolymerPath[] = [];
   private pathsFor: { structure: Structure | null; frame: number } = { structure: null, frame: -1 };
-  private readonly colorProperties: Record<keyof OverlayColors, TReadOnlyProperty<Color>>;
 
   public constructor(model: ViewerModel, bounds: Bounds2) {
     super({ canvasBounds: bounds, pickable: false });
     this.model = model;
-    this.colorProperties = {
-      label: MolScopeColors.labelColorProperty,
-      measurement: MolScopeColors.measurementColorProperty,
-      unitCell: MolScopeColors.unitCellColorProperty,
-      halo: MolScopeColors.selectionHaloColorProperty,
-      hover: MolScopeColors.hoverColorProperty,
-      pick: MolScopeColors.pickColorProperty,
-      hydrogenBond: MolScopeColors.hydrogenBondColorProperty,
-      axisX: MolScopeColors.axisXColorProperty,
-      axisY: MolScopeColors.axisYColorProperty,
-      axisZ: MolScopeColors.axisZColorProperty,
-    };
   }
 
   public paintCanvas(ctx: CanvasRenderingContext2D): void {
@@ -96,9 +82,18 @@ class MoleculeCanvasNode extends CanvasNode {
     } else if (!needsPaths) {
       this.paths = [];
     }
-    const colors = Object.fromEntries(
-      Object.entries(this.colorProperties).map(([key, property]) => [key, property.value.toCSS()]),
-    ) as unknown as OverlayColors;
+    const colors: OverlayColors = {
+      label: MolScopeColors.labelColorProperty.value.toCSS(),
+      measurement: MolScopeColors.measurementColorProperty.value.toCSS(),
+      unitCell: MolScopeColors.unitCellColorProperty.value.toCSS(),
+      halo: MolScopeColors.selectionHaloColorProperty.value.toCSS(),
+      hover: MolScopeColors.hoverColorProperty.value.toCSS(),
+      pick: MolScopeColors.pickColorProperty.value.toCSS(),
+      hydrogenBond: MolScopeColors.hydrogenBondColorProperty.value.toCSS(),
+      axisX: MolScopeColors.axisXColorProperty.value.toCSS(),
+      axisY: MolScopeColors.axisYColorProperty.value.toCSS(),
+      axisZ: MolScopeColors.axisZColorProperty.value.toCSS(),
+    };
     const axisLabels = StringManager.getInstance().getAxisLabels();
     ctx.save();
     ctx.translate(bounds.minX, bounds.minY);
