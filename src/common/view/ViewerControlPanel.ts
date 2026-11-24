@@ -79,10 +79,10 @@ export class ViewerControlPanel extends MolScopePanel {
     const groupCombos = groups.map((group) => {
       const entries = model.entries.filter((e) => e.group === group);
       // Each combo owns a Property whose value is always one of its items.
-      const local = new Property<string>(
+      const localProperty = new Property<string>(
         entries.some((e) => e.id === model.entryIdProperty.value) ? model.entryIdProperty.value : CUSTOM_ENTRY_ID,
       );
-      local.lazyLink((id) => {
+      localProperty.lazyLink((id) => {
         if (id !== CUSTOM_ENTRY_ID && id !== model.entryIdProperty.value) {
           model.loadEntry(id).catch(() => undefined);
         }
@@ -94,12 +94,12 @@ export class ViewerControlPanel extends MolScopePanel {
         })),
         customChoice(CUSTOM_ENTRY_ID),
       ];
-      const combo = comboBox(local, choices, listParent, a11y.structureSelectorStringProperty, inner);
-      return { group, local, combo, ids: new Set(entries.map((e) => e.id)) };
+      const combo = comboBox(localProperty, choices, listParent, a11y.structureSelectorStringProperty, inner);
+      return { group, localProperty, combo, ids: new Set(entries.map((e) => e.id)) };
     });
     const syncCombos = (id: string) => {
       for (const g of groupCombos) {
-        g.local.value = g.ids.has(id) ? id : CUSTOM_ENTRY_ID;
+        g.localProperty.value = g.ids.has(id) ? id : CUSTOM_ENTRY_ID;
       }
       const entry = libraryEntry(id);
       if (entry && groups.includes(entry.group)) {
@@ -383,7 +383,7 @@ export class ViewerControlPanel extends MolScopePanel {
         property.dispose();
       }
       for (const g of groupCombos) {
-        g.local.dispose();
+        g.localProperty.dispose();
       }
       groupProperty.dispose();
       styleProperty.dispose();
