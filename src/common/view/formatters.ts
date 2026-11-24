@@ -74,14 +74,14 @@ export function formatMeasurement(atomCount: number, value: number): string {
 export function formatScriptMessage(message: ScriptMessage): string {
   const patterns = StringManager.getInstance().getScriptMessages();
   const pattern = patterns[`${message.key}StringProperty`].value;
-  const args: Record<string, string | number> = { ...message.args };
-  if (message.key === "loadFailed" && typeof args["reason"] === "string") {
-    args["reason"] = formatLoadError(args["reason"]);
+  if (message.key === "loadFailed") {
+    return StringUtils.fillIn(pattern, { reason: formatLoadError(message.args.reason) });
   }
-  if (message.key === "measured" && typeof args["value"] === "number") {
-    args["value"] = formatMeasurement(Number(args["count"] ?? 2), args["value"]);
+  if (message.key === "measured") {
+    const { count, value } = message.args;
+    return StringUtils.fillIn(pattern, { count, value: formatMeasurement(count, value) });
   }
-  return StringUtils.fillIn(pattern, args);
+  return StringUtils.fillIn(pattern, message.args);
 }
 
 /** Translate known parse reasons while preserving server/network diagnostics. */
