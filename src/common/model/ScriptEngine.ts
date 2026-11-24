@@ -43,12 +43,27 @@ export const ScriptMessageKey = {
 } as const;
 type ScriptMessageKeyValue = (typeof ScriptMessageKey)[keyof typeof ScriptMessageKey];
 
-export type ScriptMessage = {
-  readonly key: ScriptMessageKeyValue;
-  readonly isError: boolean;
-  /** Substitution values; the view decides the wording. */
-  readonly args: Readonly<Record<string, string | number>>;
+type ScriptMessageArgs = {
+  selected: { count: number };
+  loaded: { title: string; count: number };
+  loading: Record<string, never>;
+  measured: { value: number; count: number };
+  echo: { text: string };
+  help: { commands: string };
+  unknownCommand: { command: string };
+  badSelection: { token: string };
+  badArgument: { argument: string };
+  noStructure: Record<string, never>;
+  loadFailed: { reason: string };
 };
+
+export type ScriptMessage = {
+  [Key in ScriptMessageKeyValue]: {
+    readonly key: Key;
+    readonly isError: boolean;
+    readonly args: Readonly<ScriptMessageArgs[Key]>;
+  };
+}[ScriptMessageKeyValue];
 
 /** Superseded work is neither a successful load nor a user-facing script error. */
 export class ScriptCancelledError extends Error {}
@@ -222,8 +237,12 @@ export class ScriptEngine {
         }
         messages.push(
           error instanceof SelectionSyntaxError
-            ? message(ScriptMessageKey.BAD_SELECTION, true, { token: error.token })
-            : message(ScriptMessageKey.LOAD_FAILED, true, { reason: error instanceof Error ? error.message : "" }),
+            ? { key: ScriptMessageKey.BAD_SELECTION, isError: true, args: { token: error.token } }
+            : {
+                key: ScriptMessageKey.LOAD_FAILED,
+                isError: true,
+                args: { reason: error instanceof Error ? error.message : "" },
+              },
         );
         break;
       }
@@ -239,10 +258,10 @@ export class ScriptEngine {
     const first = args[0] ?? "";
 
     if (verb === "help") {
-      return [message(ScriptMessageKey.HELP, false, { commands: COMMANDS.join(", ") })];
+      return [{ key: ScriptMessageKey.HELP, isError: false, args: { commands: COMMANDS.join(", ") } }];
     }
     if (verb === "echo") {
-      return [message(ScriptMessageKey.ECHO, false, { text: rest.replace(/^["']|["']$/g, "") })];
+      return [{ key: ScriptMessageKey.ECHO, isError: false, args: { text: rest.replace(/^["']|["']$/g, "") } }];
     }
     if (verb === "load") {
       return this.load(rest);
@@ -263,8 +282,8 @@ export class ScriptEngine {
     const context = this.target.selectionContext();
     if (!(state && context)) {
       return COMMANDS.includes(verb)
-        ? [message(ScriptMessageKey.NO_STRUCTURE, true, {})]
-        : [message(ScriptMessageKey.UNKNOWN_COMMAND, true, { command: head })];
+        ? [{ key: ScriptMessageKey.NO_STRUCTURE, isError: true, args: {} }]
+        : [{ key: ScriptMessageKey.UNKNOWN_COMMAND, isError: true, args: { command: head } }];
     }
 
     return this.executeStructureCommand(verb, rest, args, first, head, state, context);
@@ -342,7 +361,7 @@ export class ScriptEngine {
         this.target.centerOn(rest ? evaluateSelection(rest, context) : null);
         return [];
       default:
-        return [message(ScriptMessageKey.UNKNOWN_COMMAND, true, { command: head })];
+        return [{ key: ScriptMessageKey.UNKNOWN_COMMAND, isError: true, args: { command: head } }];
     }
   }
 
@@ -405,7 +424,7 @@ export class ScriptEngine {
   private cmdSelect(state: DisplayState, rest: string, context: SelectionContext): ScriptMessage[] {
     state.setSelection(evaluateSelection(rest, context));
     this.target.displayChanged();
-    return [message(ScriptMessageKey.SELECTED, false, { count: state.selectedCount() })];
+    return [{ key: ScriptMessageKey.SELECTED, isError: false, args: { count: state.selectedCount() } }];
   }
 
   private cmdRestrict(state: DisplayState, rest: string, context: SelectionContext): ScriptMessage[] {
@@ -415,7 +434,7 @@ export class ScriptEngine {
     state.setSelection(mask);
     state.setHidden(false);
     this.target.displayChanged();
-    return [message(ScriptMessageKey.SELECTED, false, { count: state.selectedCount() })];
+    return [{ key: ScriptMessageKey.SELECTED, isError: false, args: { count: state.selectedCount() } }];
   }
 
   private cmdDisplayHide(state: DisplayState, rest: string, context: SelectionContext, hide: boolean): ScriptMessage[] {
@@ -485,7 +504,7 @@ export class ScriptEngine {
       request = id ? { source: "library", id, range } : { source: "pubchem", name };
     }
     const result = await this.target.load(request, true);
-    return [message(ScriptMessageKey.LOADED, false, { title: result.title, count: result.atomCount })];
+    return [{ key: ScriptMessageKey.LOADED, isError: false, args: { title: result.title, count: result.atomCount } }];
   }
 
   private background(arg: string): ScriptMessage[] {
@@ -573,7 +592,7 @@ export class ScriptEngine {
     const value = this.target.addMeasurement(indices);
     return value === null
       ? [badArgument(joined)]
-      : [message(ScriptMessageKey.MEASURED, false, { value, count: indices.length })];
+      : [{ key: ScriptMessageKey.MEASURED, isError: false, args: { value, count: indices.length } }];
   }
 
   private set(args: readonly string[]): ScriptMessage[] {
@@ -629,14 +648,6 @@ export class ScriptEngine {
   }
 }
 
-function message(
-  key: ScriptMessageKeyValue,
-  isError: boolean,
-  args: Readonly<Record<string, string | number>>,
-): ScriptMessage {
-  return { key, isError, args };
-}
-
 function badArgument(argument: string): ScriptMessage {
-  return message(ScriptMessageKey.BAD_ARGUMENT, true, { argument });
+  return { key: ScriptMessageKey.BAD_ARGUMENT, isError: true, args: { argument } };
 }

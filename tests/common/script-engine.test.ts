@@ -94,8 +94,7 @@ describe("ScriptEngine", () => {
 
   it("selects and styles only the selection, like Jmol", async () => {
     const messages = await model.runScript("select nitrogen; spacefill 100%; color yellow");
-    expect(messages[0]?.key).toBe(ScriptMessageKey.SELECTED);
-    expect(messages[0]?.args["count"]).toBe(4);
+    expect(messages[0]).toMatchObject({ key: ScriptMessageKey.SELECTED, args: { count: 4 } });
     const state = model.displayState!;
     const n = state.structure.atoms.findIndex((a) => a.element.symbol === "N");
     const c = state.structure.atoms.findIndex((a) => a.element.symbol === "C");

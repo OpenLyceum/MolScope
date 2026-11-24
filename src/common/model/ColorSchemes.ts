@@ -7,6 +7,7 @@
  * Colours are 0xRRGGBB integers so this module stays free of Scenery.
  */
 
+import { roundSymmetric } from "scenerystack/dot";
 import type { Atom, Residue, Structure } from "./Structure.js";
 import { ResidueKind, SecondaryStructure } from "./Structure.js";
 
@@ -142,9 +143,9 @@ export function parseColor(text: string): number | null {
 
 /** Linear blend between two 0xRRGGBB colours. */
 function mixColors(c1: number, c2: number, t: number): number {
-  const r = Math.round(((c1 >> 16) & 255) * (1 - t) + ((c2 >> 16) & 255) * t);
-  const g = Math.round(((c1 >> 8) & 255) * (1 - t) + ((c2 >> 8) & 255) * t);
-  const b = Math.round((c1 & 255) * (1 - t) + (c2 & 255) * t);
+  const r = roundSymmetric(((c1 >> 16) & 255) * (1 - t) + ((c2 >> 16) & 255) * t);
+  const g = roundSymmetric(((c1 >> 8) & 255) * (1 - t) + ((c2 >> 8) & 255) * t);
+  const b = roundSymmetric((c1 & 255) * (1 - t) + (c2 & 255) * t);
   return (r << 16) | (g << 8) | b;
 }
 
